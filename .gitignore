@@ -4,3 +4,7 @@ __pycache__/
 utils/__pycache__
 imagenet_seg/
 run/
+artifacts
+*.pt
+
+output_dir

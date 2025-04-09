@@ -1,0 +1,41 @@
+[34m[1mwandb[0m: [32m[41mERROR[0m artifact 'checkpoint_epoch_0:latest' not found in 'jnzhao3/clip-finetuning'
+Traceback (most recent call last):
+  File "/home/jennifer/miniconda3/envs/prsclip/lib/python3.12/site-packages/wandb/apis/normalize.py", line 25, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jennifer/miniconda3/envs/prsclip/lib/python3.12/site-packages/wandb/apis/public/api.py", line 1281, in _artifact
+    artifact = wandb.Artifact._from_name(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jennifer/miniconda3/envs/prsclip/lib/python3.12/site-packages/wandb/sdk/artifacts/artifact.py", line 283, in _from_name
+    raise ValueError(f"artifact '{name}' not found in '{entity}/{project}'")
+ValueError: artifact 'checkpoint_epoch_0:latest' not found in 'jnzhao3/clip-finetuning'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/jennifer/clip_text_span/load.py", line 9, in <module>
+    artifact = wandb.use_artifact('jnzhao3/clip-finetuning/checkpoint_epoch_0:latest', type='model')
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jennifer/miniconda3/envs/prsclip/lib/python3.12/site-packages/wandb/sdk/wandb_run.py", line 387, in wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jennifer/miniconda3/envs/prsclip/lib/python3.12/site-packages/wandb/sdk/wandb_run.py", line 435, in wrapper_fn
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jennifer/miniconda3/envs/prsclip/lib/python3.12/site-packages/wandb/sdk/wandb_run.py", line 425, in wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jennifer/miniconda3/envs/prsclip/lib/python3.12/site-packages/wandb/sdk/wandb_run.py", line 3085, in use_artifact
+    artifact = public_api._artifact(type=type, name=name)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jennifer/miniconda3/envs/prsclip/lib/python3.12/site-packages/wandb/apis/normalize.py", line 79, in wrapper
+    raise CommError(message, err).with_traceback(sys.exc_info()[2])
+  File "/home/jennifer/miniconda3/envs/prsclip/lib/python3.12/site-packages/wandb/apis/normalize.py", line 25, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jennifer/miniconda3/envs/prsclip/lib/python3.12/site-packages/wandb/apis/public/api.py", line 1281, in _artifact
+    artifact = wandb.Artifact._from_name(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jennifer/miniconda3/envs/prsclip/lib/python3.12/site-packages/wandb/sdk/artifacts/artifact.py", line 283, in _from_name
+    raise ValueError(f"artifact '{name}' not found in '{entity}/{project}'")
+wandb.errors.errors.CommError: artifact 'checkpoint_epoch_0:latest' not found in 'jnzhao3/clip-finetuning'

@@ -1,0 +1,14 @@
+[34m[1mwandb[0m: Downloading large artifact model-checkpoints:v0, 1631.39MB. 1 files...
+[34m[1mwandb[0m:   1 of 1 files downloaded.
+Done. 0:0:1.9
+> [32m/home/jennifer/clip_text_span/load.py[39m([92m21[39m)[36m<module>[39m[34m()[39m
+[32m     20[39m [38;5;66;03m# Load the checkpoint file[39;00m
+[32m---> 21[39m checkpoint = torch.load(f"{artifact_dir}/checkpoint_epoch_0.pt")
+[32m     22[39m
+/home/jennifer/clip_text_span/load.py:21: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  checkpoint = torch.load(f"{artifact_dir}/checkpoint_epoch_0.pt")
+
+> [32m/home/jennifer/clip_text_span/load.py[39m([92m34[39m)[36m<module>[39m[34m()[39m
+[32m     33[39m [38;5;66;03m# Optionally restore optimizer state[39;00m
+[32m---> 34[39m optimizer = torch.optim.Adam(model.parameters())
+[32m     35[39m optimizer.load_state_dict(checkpoint[[33m'optimizer_state_dict'[39m])

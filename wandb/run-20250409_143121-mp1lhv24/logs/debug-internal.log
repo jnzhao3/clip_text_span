@@ -1,0 +1,16 @@
+{"time":"2025-04-09T14:31:21.089590453-07:00","level":"INFO","msg":"stream: starting","core version":"0.19.9","symlink path":"/home/jennifer/clip_text_span/wandb/run-20250409_143121-mp1lhv24/logs/debug-core.log"}
+{"time":"2025-04-09T14:31:21.266967931-07:00","level":"INFO","msg":"created new stream","id":"mp1lhv24"}
+{"time":"2025-04-09T14:31:21.267008431-07:00","level":"INFO","msg":"stream: started","id":"mp1lhv24"}
+{"time":"2025-04-09T14:31:21.267021651-07:00","level":"INFO","msg":"writer: Do: started","stream_id":"mp1lhv24"}
+{"time":"2025-04-09T14:31:21.26706532-07:00","level":"INFO","msg":"handler: started","stream_id":"mp1lhv24"}
+{"time":"2025-04-09T14:31:21.26711996-07:00","level":"INFO","msg":"sender: started","stream_id":"mp1lhv24"}
+{"time":"2025-04-09T14:31:21.439627891-07:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-04-09T14:31:21.974073965-07:00","level":"WARN","msg":"sender: sendUseArtifact: job builder disabled, skipping"}
+{"time":"2025-04-09T14:31:23.777694214-07:00","level":"INFO","msg":"stream: closing","id":"mp1lhv24"}
+{"time":"2025-04-09T14:31:23.777714543-07:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2025-04-09T14:31:23.777747073-07:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2025-04-09T14:31:24.181959844-07:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-04-09T14:31:24.320522242-07:00","level":"INFO","msg":"handler: closed","stream_id":"mp1lhv24"}
+{"time":"2025-04-09T14:31:24.320566622-07:00","level":"INFO","msg":"writer: Close: closed","stream_id":"mp1lhv24"}
+{"time":"2025-04-09T14:31:24.320575122-07:00","level":"INFO","msg":"sender: closed","stream_id":"mp1lhv24"}
+{"time":"2025-04-09T14:31:24.320615452-07:00","level":"INFO","msg":"stream: closed","id":"mp1lhv24"}
