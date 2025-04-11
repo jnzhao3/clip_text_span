@@ -16,7 +16,24 @@ def process_imagenet(dataset, json):
     ds['train'][0]
     {'image': <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=817x363 at 0x7F58FED23B90>, 'label': 726}
     '''
-    pass
+    classes = json["classes"]
+    classes_to_index = {classes[i]: i for i in range(len(classes))}
+    index_to_classes = {i: classes[i] for i in range(len(classes))}
+
+    dataset = dataset.cast_column("image", Image())
+    # dataset = dataset.map(lambda x: {"index_label": x["label"]})
+    dataset = dataset.rename_column("label", "index_label")
+    dataset = dataset.map(lambda x: {"label": index_to_classes[x["index_label"]]})
+
+    templates = json["templates"]
+    captions = []
+    for i in range(len(classes)):
+        t = []
+        for j in range(len(templates)):
+            t.append(templates[j][0] + classes[i] + templates[j][1])
+        captions.append(t)
+    
+    return dataset, classes_to_index, index_to_classes, captions
 
 def process_birds(dataset, json):
     '''

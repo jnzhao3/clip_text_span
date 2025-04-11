@@ -6,7 +6,7 @@ import json
 import argparse
 import wandb
 from tqdm import tqdm
-from data import process_birds
+from data import process_birds, process_imagenet
 from torch import nn
 ##===== END OF IMPORTS =====##
 
@@ -36,8 +36,9 @@ if args.dataset == 'birdsnap':
     ds, classes_to_index, index_to_classes, captions = process_birds(ds, json_contents)
 elif args.dataset == 'imagenet':
     ds = load_dataset("imagenet-1k", trust_remote_code=True)
+    ds = ds["train"].select(range(1000))
     json_contents = json.load(open("./imagenet_prompts.json"))
-    import ipdb; ipdb.set_trace()
+    ds, classes_to_index, index_to_classes, captions = process_imagenet(ds, json_contents)
 
 ##==== END OF IMAGE PREPROCESSING ====##
 
