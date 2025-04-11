@@ -6,6 +6,7 @@
 conda activate prsclip
 pip install open-clip-torch
 pip install datasets
+pip install wandb
 ```
 
 ## Download the Birds
@@ -18,7 +19,7 @@ ds = load_dataset("sasha/birdsnap")
 ## Access Imagenet
 
 * Request access at https://huggingface.co/datasets/imagenet-1k.
-* Create access token from huggingface with access to imagenet-1k
+* Create access token from huggingface with access to imagenet-1k.
 ```
 huggingface-cli login
 ```

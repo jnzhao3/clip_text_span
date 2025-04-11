@@ -36,8 +36,8 @@ if args.dataset == 'birdsnap':
     json_contents = json.load(open("./birdsnap_prompts.json"))
     ds, classes_to_index, index_to_classes, captions = process_birds(ds, json_contents)
 elif args.dataset == 'imagenet':
-    ds = load_dataset("imagenet-1k", trust_remote_code=True)
-    ds = ds["train"].select(range(1000))
+    ds = load_dataset("imagenet-1k", split="train[:1000]", trust_remote_code=True)
+    # ds = ds["train"].select(range(1000))
     json_contents = json.load(open("./imagenet_prompts.json"))
     ds, classes_to_index, index_to_classes, captions = process_imagenet(ds, json_contents)
 
