@@ -1,3 +1,5 @@
+# CS 182 Final Project
+
 ## Download the Birds
 
 ```
@@ -26,3 +28,19 @@ huggingface-cli login
 ```
 python zero-shot.py
 ```
+
+## Data Processing Functions
+Format the data to be like:
+
+```
+image = sample["image"]
+label = sample["label"]
+index_label = sample["index_label"]
+```
+
+* These are the only required columns for now.
+
+## WandB
+
+* Be sure to paste in your authentication code.
+* Should log the first five images of the dataset.

@@ -15,6 +15,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--wandb_project', type=str, default='zero-shot', help='WandB project name')
 parser.add_argument('--dataset', type=str, default='birdsnap', help='Dataset name')
 parser.add_argument('--clip_model', type=str, default='hf-hub:laion/CLIP-ViT-L-14-laion2B-s32B-b82K', help='CLIP model name')
+parser.add_argument('--grayscale', type=bool, default=False, help='Grayscale images')
 
 args = parser.parse_args()
 
@@ -40,10 +41,19 @@ elif args.dataset == 'imagenet':
     json_contents = json.load(open("./imagenet_prompts.json"))
     ds, classes_to_index, index_to_classes, captions = process_imagenet(ds, json_contents)
 
+if args.grayscale:
+    print("Converting images to grayscale")
+    ds = ds.map(lambda x: {"image": x["image"].convert("L")})
+
 ##==== END OF IMAGE PREPROCESSING ====##
 
 ##==== WANDB CONFIGURATION ====##
 wandb.init(project=args.wandb_project, config=args)
+
+images = [wandb.Image(ds[i]["image"], caption=f"Label: {ds[i]['label']}") for i in range(5)]
+wandb.log({"grayscale_images": images})
+
+##==== WANDB CONFIGURATION END ====##
 
 text = []
 for class_caption in captions:
@@ -73,6 +83,8 @@ with torch.no_grad(), torch.cuda.amp.autocast():
         logits = (100.0 * image_features @ text_features.T)
         text_probs = logits.softmax(dim=-1)
         max_prob, index = text_probs[0].max(dim=-1)
+        # grab top 5
+        top_five_probs, top_five_indices = text_probs[0].topk(5)
         index = index.item()
         is_correct = index == index_label
         l = loss_fn(logits, torch.tensor([index_label]).to(device=device))
@@ -81,6 +93,7 @@ with torch.no_grad(), torch.cuda.amp.autocast():
             correct_counter += 1
         else:
             print(f"Incorrectly Predicted: {index_to_classes[index]}, Actual: {label}, Probability: {max_prob.item():.4f}")
+            print(f"Top 5 Predictions: {[index_to_classes[i] for i in top_five_indices.tolist()]}")
         total_counter += 1
 
     print(f"Accuracy: {correct_counter / total_counter * 100:.2f}%")

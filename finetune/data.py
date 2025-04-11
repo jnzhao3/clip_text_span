@@ -3,6 +3,16 @@ from datasets import Dataset, Image
 import json
 ##==== END OF IMPORTS ====##
 
+##==== README ====##
+'''
+Data is processed to be of this form:
+image = sample["image"]
+label = sample["label"]
+index_label = sample["index_label"]
+
+'''
+##==== END OF README ====##
+
 def one_hot(n, i):
     '''
     Create torch tensor of size n with 1 at index i and 0 elsewhere.
