@@ -163,7 +163,7 @@ class Finetuner():
             }, tmp.name)
 
             # Log checkpoint to W&B
-            artifact = wandb.Artifact('model-checkpoints', type='model')
+            artifact = wandb.Artifact('model-checkpoints', type='model') # TODO: change to a more specific name
             artifact.add_file(tmp.name, name=f"checkpoint_epoch_{epoch}.pt")
             wandb.log_artifact(artifact)
 
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     tokenizer = open_clip.get_tokenizer(args.clip_model)
 
     if args.dataset == 'imagenet':
-        ds = load_dataset("imagenet-1k", split="train[:1000]", trust_remote_code=True) # TODO: change to full dataset if necessary.
+        ds = load_dataset("imagenet-1k", split="train[:1000]", trust_remote_code=True) # TODO: change to full dataset if necessary. Or shuffle being grabbing only 1000.
         json_contents = json.load(open("./imagenet_prompts.json"))
         ds, classes_to_index, index_to_classes, captions = process_imagenet(ds, json_contents)
 
