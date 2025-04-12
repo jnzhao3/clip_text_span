@@ -13,18 +13,25 @@ import json
 from data import process_birds, process_imagenet
 from tqdm import tqdm
 from torch.amp import autocast, GradScaler
+import tempfile
 ##==== END OF IMPORTS ====##
 
 ##==== CONFIGURATION ====##
 parser = argparse.ArgumentParser()
 parser.add_argument('--wandb_project', type=str, default='clip-finetuning', help='WandB project name')
+parser.add_argument('--run_name', type=str, default='', help='WandB run name')
 parser.add_argument('--dataset', type=str, default='birdsnap', help='Dataset name')
 parser.add_argument('--clip_model', type=str, default='hf-hub:laion/CLIP-ViT-L-14-laion2B-s32B-b82K', help='CLIP model name')
+parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
+parser.add_argument('--epochs', type=int, default=20, help='Number of epochs')
+parser.add_argument('--model_save_interval', type=int, default=5, help='Model save interval')
+parser.add_argument('--eval_interval', type=int, default=2, help='Training evaluation interval')
+##===== END OF CONFIGURATION ====##
 
 ##===== FINETUNING SCRIPT =====##
 class Finetuner():
 
-    def __init__(self, model, tokenizer, preprocess_train, preprocess_val, dataset, classes_to_index, index_to_classes, captions, epochs, batch_size, wandb_project):
+    def __init__(self, model, tokenizer, preprocess_train, preprocess_val, dataset, classes_to_index, index_to_classes, captions, epochs, batch_size, wandb_project, wandb_run_name, model_save_interval, eval_interval):
         self.model = model
         self.tokenizer = tokenizer
         self.preprocess_train = preprocess_train
@@ -34,9 +41,14 @@ class Finetuner():
         print(f"Using device: {self.device}")
         self.model = self.model.to(self.device)
         self.epochs = epochs
+        self.model_save_interval = model_save_interval
+        self.eval_interval = eval_interval
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=1e-5)
-        wandb.init(project=wandb_project, config=args)
+        if wandb_run_name:
+            wandb.init(project=wandb_project, name=wandb_run_name, config=args)
+        else:
+            wandb.init(project=wandb_project, config=args)
 
         images = [wandb.Image(dataset[i]["image"], caption=f"Label: {dataset[i]['label']}") for i in range(5)]
         wandb.log({"train_images": images})
@@ -66,15 +78,16 @@ class Finetuner():
             self.text_features = text_features / text_features.norm(dim=-1, keepdim=True)
             self.text_features = self.text_features.to(self.device)
 
-
     def train(self):
+        '''
+        Trains the model, saves checkpoints, and evaluates the model.
+        '''
         loss_fn = nn.CrossEntropyLoss()
         scaler = GradScaler()
         print("Starting training...")
         for epoch in range(self.epochs):
             self.model.train()
             loss_avg = 0
-            # grad_avg = 0
             counter = 0
             for sample in tqdm(self.train_loader):
                 images = sample["image"].to(self.device, non_blocking=True)
@@ -97,10 +110,10 @@ class Finetuner():
             loss_avg = loss_avg / counter
             wandb.log({"epoch": epoch, "average loss": loss_avg})
 
-            if epoch % 10 == 0:
+            if epoch % self.model_save_interval == 0:
                 self.save_checkpoint(epoch)
 
-            if epoch % 5 == 0:
+            if epoch % self.eval_interval == 0:
                 self.model.eval()
                 with torch.no_grad():
                     val_loss = 0
@@ -121,38 +134,49 @@ class Finetuner():
                     wandb.log({"epoch": epoch, "val_loss": val_loss})
                     print(f"Validation loss: {val_loss}")
 
-    def save_checkpoint(self, epoch):
-        checkpoint_path = f"checkpoint_epoch_{epoch}.pt"
-        torch.save({
-            'epoch': epoch,
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict()
-        }, checkpoint_path)
+    # def save_checkpoint(self, epoch):
+    #     '''
+    #     Saves the model checkpoint.
+    #     '''
+    #     checkpoint_path = f"checkpoint_epoch_{epoch}.pt"
+    #     torch.save({
+    #         'epoch': epoch,
+    #         'model_state_dict': self.model.state_dict(),
+    #         'optimizer_state_dict': self.optimizer.state_dict()
+    #     }, checkpoint_path)
 
-        # Log checkpoint to wandb
-        artifact = wandb.Artifact('model-checkpoints', type='model')
-        artifact.add_file(checkpoint_path)
-        wandb.log_artifact(artifact)
+    #     # Log checkpoint to wandb
+    #     artifact = wandb.Artifact('model-checkpoints', type='model')
+    #     artifact.add_file(checkpoint_path)
+    #     wandb.log_artifact(artifact)
+
+    def save_checkpoint(self, epoch):
+        '''
+        Saves the model checkpoint temporarily and logs to W&B.
+        '''
+        with tempfile.NamedTemporaryFile(suffix=".pt", delete=True) as tmp:
+            # Save checkpoint to temporary file
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': self.model.state_dict(),
+                'optimizer_state_dict': self.optimizer.state_dict()
+            }, tmp.name)
+
+            # Log checkpoint to W&B
+            artifact = wandb.Artifact('model-checkpoints', type='model')
+            artifact.add_file(tmp.name, name=f"checkpoint_epoch_{epoch}.pt")
+            wandb.log_artifact(artifact)
 
 if __name__ == "__main__":
+    # Parse arguments
     args = parser.parse_args()
     model, preprocess_train, preprocess_val = open_clip.create_model_and_transforms(args.clip_model)
     tokenizer = open_clip.get_tokenizer(args.clip_model)
 
     if args.dataset == 'imagenet':
-        ds = load_dataset("imagenet-1k", split="train", trust_remote_code=True)
-        # ds = ds["train"].select(range(20))
+        ds = load_dataset("imagenet-1k", split="train[:1000]", trust_remote_code=True) # TODO: change to full dataset if necessary.
         json_contents = json.load(open("./imagenet_prompts.json"))
         ds, classes_to_index, index_to_classes, captions = process_imagenet(ds, json_contents)
-
-    # dataset = Dataset.from_file("../birdsnap_dataset/train/data-00003-of-00139.arrow")
-    # # Cast the image column to the Image feature
-    # dataset = dataset.cast_column("image", Image())
-
-    # Load the JSON file
-    # json_contents = json.load(open("./birdsnap_prompts.json"))
-    # classes = json_contents["classes"]
-    # templates = json_contents["templates"]
 
     finetuner = Finetuner(
         model=model,
@@ -163,8 +187,11 @@ if __name__ == "__main__":
         classes_to_index=classes_to_index,
         index_to_classes=index_to_classes,
         captions=captions,
-        epochs=20,  # Number of epochs
-        batch_size=32,  # Batch size
-        wandb_project=args.wandb_project
+        epochs=args.epochs,  # Number of epochs
+        batch_size=args.batch_size,
+        wandb_project=args.wandb_project,
+        wandb_run_name=args.run_name,
+        model_save_interval=args.model_save_interval,
+        eval_interval=args.eval_interval
     )
     finetuner.train()

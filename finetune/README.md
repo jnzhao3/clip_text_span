@@ -45,3 +45,21 @@ index_label = sample["index_label"]
 
 * Be sure to paste in your authentication code.
 * Should log the first five images of the dataset.
+
+## The Finetuning Script
+* These are the arguments to the Finetuner class:
+
+```
+parser.add_argument('--wandb_project', type=str, default='clip-finetuning', help='WandB project name')
+parser.add_argument('--dataset', type=str, default='birdsnap', help='Dataset name')
+parser.add_argument('--clip_model', type=str, default='hf-hub:laion/CLIP-ViT-L-14-laion2B-s32B-b82K', help='CLIP model name')
+parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
+parser.add_argument('--epochs', type=int, default=20, help='Number of epochs')
+parser.add_argument('--model_save_interval', type=int, default=5, help='Model save interval')
+parser.add_argument('--eval_interval', type=int, default=2, help='Training evaluation interval')
+```
+
+* So an example run command:
+```
+python finetune.py --dataset imagenet --batch_size 32 --epochs 30 --model_save_interval 10 --eval_interval 10 --run_name name-of-wandb-run
+```
