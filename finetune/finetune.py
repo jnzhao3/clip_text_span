@@ -68,48 +68,58 @@ class Finetuner():
 
 
     def train(self):
-        # text = self.tokenizer(self.captions).to(self.device)
-        # with torch.no_grad(), torch.cuda.amp.autocast():
-        #     text_features = self.model.encode_text(text)
-        #     text_features /= text_features.norm(dim=-1, keepdim=True)
         loss_fn = nn.CrossEntropyLoss()
         scaler = GradScaler()
         print("Starting training...")
         for epoch in range(self.epochs):
             self.model.train()
             loss_avg = 0
+            # grad_avg = 0
             counter = 0
             for sample in tqdm(self.train_loader):
-                images = sample["image"].to(self.device)
-                labels = sample["label"]
-                index_labels = sample["index_label"].to(self.device)
+                images = sample["image"].to(self.device, non_blocking=True)
+                index_labels = sample["index_label"].to(self.device, non_blocking=True)
                 self.optimizer.zero_grad()
-                with torch.no_grad(), autocast(device_type=self.device.type):
+                with autocast(device_type=self.device.type):
                     images_features = model.encode_image(images)
-                    images_features_normalized = images_features / images_features.norm(dim=-1, keepdim=True)
-                    print("Calculated image features")
-                    
+                    images_features_normalized = images_features / images_features.norm(dim=-1, keepdim=True)                    
                     logits = (100.0 * images_features_normalized @ self.text_features.T)
-                    print("Calculated logits")
                 
                     loss = loss_fn(logits, index_labels)
 
-                # scaler.scale(loss).backward()
-                # scaler.step(self.optimizer)
-                # scaler.update()
-                # loss.backward()
-                # self.optimizer.step()
+                    scaler.scale(loss).backward()
+                    scaler.step(self.optimizer)
+                    scaler.update()
 
-                # loss_avg += loss.item()
                 loss_avg += loss.detach().cpu().numpy().item()
+
                 counter += 1
             loss_avg = loss_avg / counter
             wandb.log({"epoch": epoch, "average loss": loss_avg})
 
-            # Validation step
-            # self.validate(self.val_loader)
-            # Save checkpoint
-            # self.save_checkpoint(epoch)
+            if epoch % 10 == 0:
+                self.save_checkpoint(epoch)
+
+            if epoch % 5 == 0:
+                self.model.eval()
+                with torch.no_grad():
+                    val_loss = 0
+                    val_counter = 0
+                    for sample in tqdm(self.val_loader):
+                        images = sample["image"].to(self.device, non_blocking=True)
+                        index_labels = sample["index_label"].to(self.device, non_blocking=True)
+                        with autocast(device_type=self.device.type):
+                            images_features = model.encode_image(images)
+                            images_features_normalized = images_features / images_features.norm(dim=-1, keepdim=True)                    
+                            logits = (100.0 * images_features_normalized @ self.text_features.T)
+                        
+                            loss = loss_fn(logits, index_labels)
+
+                        val_loss += loss.detach().cpu().numpy().item()
+                        val_counter += 1
+                    val_loss = val_loss / val_counter
+                    wandb.log({"val_loss": val_loss})
+                    print(f"Validation loss: {val_loss}")
 
     def save_checkpoint(self, epoch):
         checkpoint_path = f"checkpoint_epoch_{epoch}.pt"
@@ -130,7 +140,7 @@ if __name__ == "__main__":
     tokenizer = open_clip.get_tokenizer(args.clip_model)
 
     if args.dataset == 'imagenet':
-        ds = load_dataset("imagenet-1k", split="train[:1000]", trust_remote_code=True)
+        ds = load_dataset("imagenet-1k", split="train", trust_remote_code=True)
         # ds = ds["train"].select(range(20))
         json_contents = json.load(open("./imagenet_prompts.json"))
         ds, classes_to_index, index_to_classes, captions = process_imagenet(ds, json_contents)
@@ -153,8 +163,8 @@ if __name__ == "__main__":
         classes_to_index=classes_to_index,
         index_to_classes=index_to_classes,
         captions=captions,
-        epochs=10,  # Number of epochs
-        batch_size=4,  # Batch size
+        epochs=20,  # Number of epochs
+        batch_size=32,  # Batch size
         wandb_project=args.wandb_project
     )
     finetuner.train()
