@@ -118,7 +118,7 @@ class Finetuner():
                         val_loss += loss.detach().cpu().numpy().item()
                         val_counter += 1
                     val_loss = val_loss / val_counter
-                    wandb.log({"val_loss": val_loss})
+                    wandb.log({"epoch": epoch, "val_loss": val_loss})
                     print(f"Validation loss: {val_loss}")
 
     def save_checkpoint(self, epoch):
