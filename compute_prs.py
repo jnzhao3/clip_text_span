@@ -11,6 +11,9 @@ from utils.factory import create_model_and_transforms, get_tokenizer
 from utils.binary_waterbirds import BinaryWaterbirds
 from prs_hook import hook_prs_logger
 from torchvision.datasets import CIFAR100, CIFAR10, ImageNet, ImageFolder
+from datasets import load_dataset
+from torch.nn.parallel import DataParallel
+import torch.nn as nn
 
 
 def get_args_parser():

@@ -1,0 +1,31 @@
+{
+  "os": "Linux-5.3.0-40-generic-x86_64-with-glibc2.27",
+  "python": "CPython 3.12.9",
+  "startedAt": "2025-04-13T00:46:34.152732Z",
+  "program": "/home/eecs/shuoyuan/proj/clip_text_span/demo.ipynb",
+  "codePath": "demo.ipynb",
+  "git": {
+    "remote": "https://github.com/jnzhao3/clip_text_span.git",
+    "commit": "ceee5244b68a5a0f5ca20d63f5b5c696f38f8e1e"
+  },
+  "email": "shuoyuan@berkeley.edu",
+  "root": "/home/eecs/shuoyuan/proj/clip_text_span",
+  "host": "havoc",
+  "executable": "/home/eecs/shuoyuan/miniconda3/envs/prsclip/bin/python",
+  "codePathLocal": "demo.ipynb",
+  "cpu_count": 72,
+  "cpu_count_logical": 144,
+  "disk": {
+    "/": {
+      "total": "17179869184",
+      "used": "5725356032"
+    }
+  },
+  "memory": {
+    "total": "1082061541376"
+  },
+  "cpu": {
+    "count": 72,
+    "countLogical": 144
+  }
+}

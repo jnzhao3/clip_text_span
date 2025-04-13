@@ -173,8 +173,8 @@ if __name__ == "__main__":
     model, preprocess_train, preprocess_val = open_clip.create_model_and_transforms(args.clip_model)
     tokenizer = open_clip.get_tokenizer(args.clip_model)
 
-    if args.dataset == 'imagenet':
-        ds = load_dataset("imagenet-1k", split="train[:1000]", trust_remote_code=True) # TODO: change to full dataset if necessary. Or shuffle being grabbing only 1000.
+    if args.dataset == 'imagenet_sketch':
+        ds = load_dataset("imagenet_sketch", split="train[:1000]", trust_remote_code=True).shuffle(seed=42) # TODO: change to full dataset if necessary. Or shuffle being grabbing only 1000.
         json_contents = json.load(open("./imagenet_prompts.json"))
         ds, classes_to_index, index_to_classes, captions = process_imagenet(ds, json_contents)
 
