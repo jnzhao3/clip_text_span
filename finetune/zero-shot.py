@@ -15,7 +15,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--wandb_project', type=str, default='zero-shot', help='WandB project name')
 parser.add_argument('--dataset', type=str, default='birdsnap', help='Dataset name')
 parser.add_argument('--clip_model', type=str, default='hf-hub:laion/CLIP-ViT-L-14-laion2B-s32B-b82K', help='CLIP model name')
-parser.add_argument('--grayscale', type=bool, default=False, help='Grayscale images')
+parser.add_argument('--transform', type=str, default=None, help='Grayscale images')
 
 args = parser.parse_args()
 
@@ -39,11 +39,11 @@ elif args.dataset == 'imagenet':
     ds = load_dataset("imagenet-1k", split="train[:1000]", trust_remote_code=True)
     # ds = ds["train"].select(range(1000))
     json_contents = json.load(open("./imagenet_prompts.json"))
-    ds, classes_to_index, index_to_classes, captions = process_imagenet(ds, json_contents)
+    ds, classes_to_index, index_to_classes, captions = process_imagenet(ds, json_contents, transform=args.transform)
 
-if args.grayscale:
-    print("Converting images to grayscale")
-    ds = ds.map(lambda x: {"image": x["image"].convert("L")})
+# if args.grayscale:
+#     print("Converting images to grayscale")
+#     ds = ds.map(lambda x: {"image": x["image"].convert("L")})
 
 ##==== END OF IMAGE PREPROCESSING ====##
 
@@ -51,7 +51,7 @@ if args.grayscale:
 wandb.init(project=args.wandb_project, config=args)
 
 images = [wandb.Image(ds[i]["image"], caption=f"Label: {ds[i]['label']}") for i in range(5)]
-wandb.log({"grayscale_images": images})
+wandb.log({"images": images})
 
 ##==== WANDB CONFIGURATION END ====##
 
