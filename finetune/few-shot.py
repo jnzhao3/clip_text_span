@@ -16,8 +16,94 @@ import pandas as pd
 from collections import defaultdict
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import scipy.cluster.hierarchy as sch
+import seaborn as sns
+from sklearn.cluster import AgglomerativeClustering
 
 ##===== END OF IMPORTS =====##
+
+# Utility functions are now moved below the import section for better readability and modular structure
+# ==== UTILITY FUNCTIONS ====
+
+def compute_dendrogram(embeddings, labels):
+    """Generate and log a dendrogram of label embeddings using hierarchical clustering."""
+    linkage_matrix = sch.linkage(embeddings, method='ward')
+    plt.figure(figsize=(12, 6))
+    dendro = sch.dendrogram(linkage_matrix, labels=labels, leaf_rotation=90, leaf_font_size=8)
+    plt.title("Dendrogram of Label Embeddings")
+    plt.xlabel("Class Label")
+    plt.ylabel("Distance")
+    wandb.log({"Dendrogram": wandb.Image(plt)})
+    plt.close()
+
+def perform_clustering(embeddings, n_clusters=5):
+    """Perform agglomerative clustering on embeddings and return cluster IDs."""
+    clustering = AgglomerativeClustering(n_clusters=n_clusters)
+    return clustering.fit_predict(embeddings)
+
+def compute_tsne(embeddings, labels, groups):
+    """Compute and log a 2D t-SNE projection of the label embeddings with group annotations."""
+    tsne_perplexity = min(5, len(labels) - 1)
+    tsne = TSNE(n_components=2, perplexity=tsne_perplexity, init='random', random_state=42)
+    coords = tsne.fit_transform(embeddings)
+    tsne_table = wandb.Table(columns=["x", "y", "label", "group"])
+    for i, (x, y) in enumerate(coords):
+        tsne_table.add_data(x, y, labels[i], groups[i])
+    wandb.log({
+        "class_embedding_tsne": tsne_table,
+        "t-SNE Hover Plot": wandb.plot_table("wandb/point", tsne_table, {"x": "x", "y": "y"}, {"class label": "label", "group": "group"})
+    })
+    return coords
+
+def compute_pca(embeddings, labels, groups):
+    """Compute and log a 2D PCA projection of the label embeddings with group annotations."""
+    pca = PCA(n_components=2)
+    coords = pca.fit_transform(embeddings)
+    embedding_table = wandb.Table(columns=["x", "y", "label", "group"])
+    for i, (x, y) in enumerate(coords):
+        embedding_table.add_data(x, y, labels[i], groups[i])
+    wandb.log({
+        "class_embedding_projection": embedding_table,
+        "PCA Hover Plot": wandb.plot_table("wandb/point", embedding_table, {"x": "x", "y": "y"}, {"class label": "label", "group": "group"})
+    })
+    return coords
+
+def compute_per_class_accuracy(ds, model, preprocess_fn, text_features, class_labels):
+    """Calculate per-class accuracy over the dataset."""
+    from collections import defaultdict
+    class_counts = defaultdict(int)
+    class_correct = defaultdict(int)
+
+    for sample in tqdm(ds, desc="Computing per-class accuracy"):
+        label = sample["label"]
+        index_label = sample["index_label"]
+        class_counts[label] += 1
+        device = next(model.parameters()).device
+        image = preprocess_fn(sample["image"]).unsqueeze(0).to(device)
+        with torch.no_grad(), torch.cuda.amp.autocast():
+            image_features = model.encode_image(image)
+            image_features /= image_features.norm(dim=-1, keepdim=True)
+            logits = 100.0 * image_features @ text_features.T
+            probs = logits.softmax(dim=-1)
+            pred_index = probs[0].argmax().item()
+            if pred_index == index_label:
+                class_correct[label] += 1
+
+    return {label: class_correct[label] / class_counts[label] for label in class_labels if class_counts[label] > 0}
+
+def compute_per_cluster_accuracy(class_labels, cluster_ids, per_class_accuracy):
+    """Log average accuracy per semantic cluster."""
+    from collections import defaultdict
+    cluster_to_labels = defaultdict(list)
+    for label, cluster_id in zip(class_labels, cluster_ids):
+        cluster_to_labels[cluster_id].append(label)
+
+    cluster_accuracy = {}
+    for cluster_id, labels in cluster_to_labels.items():
+        accs = [per_class_accuracy.get(label, 0.0) for label in labels]
+        cluster_accuracy[f"cluster_{cluster_id}"] = sum(accs) / len(accs)
+
+    wandb.log({"per_cluster_accuracy": cluster_accuracy})
 
 ##==== CONFIGURATION ====##
 parser = argparse.ArgumentParser()
@@ -62,63 +148,40 @@ with torch.no_grad():
     label_embeddings = model.encode_text(token_inputs)
     label_embeddings = label_embeddings / label_embeddings.norm(dim=-1, keepdim=True)
 
-    # Project embeddings to 2D for visualization
-    pca = PCA(n_components=2)
-    label_embeddings_2d = pca.fit_transform(label_embeddings.cpu().numpy())
+    compute_dendrogram(label_embeddings.cpu().numpy(), class_labels)
+    cluster_ids = perform_clustering(label_embeddings.cpu().numpy(), n_clusters=5)
+    label_groups = [f"cluster_{cid}" for cid in cluster_ids]
 
-    # Create a W&B table for 2D embeddings
-    embedding_table = wandb.Table(columns=["x", "y", "label"])
-    for i, (x, y) in enumerate(label_embeddings_2d):
-        embedding_table.add_data(x, y, class_labels[i])
+# Compute average image features for each class
+image_features_per_class = defaultdict(list)
+for sample in tqdm(ds, desc="Collecting image features per class"):
+    image = preprocess_val(sample["image"]).unsqueeze(0).to(device)
+    index_label = sample["index_label"]
+    with torch.no_grad(), torch.cuda.amp.autocast():
+        image_feature = model.encode_image(image)
+        image_feature /= image_feature.norm(dim=-1, keepdim=True)
+        image_features_per_class[index_label].append(image_feature.squeeze(0).cpu())
 
-    wandb.log({"class_embedding_projection": embedding_table})
-    wandb.log({"PCA Hover Plot": wandb.plot_table("wandb/scatter", embedding_table, {"x": "x", "y": "y", "label": "label"})})
+averaged_image_embeddings = []
+image_labels = []
+for idx in range(len(class_labels)):
+    if image_features_per_class[idx]:
+        avg_feat = torch.stack(image_features_per_class[idx]).mean(dim=0)
+        averaged_image_embeddings.append(avg_feat)
+        image_labels.append(index_to_classes[idx])
+    else:
+        averaged_image_embeddings.append(torch.zeros_like(label_embeddings[0]))
+        image_labels.append(index_to_classes[idx])
 
-    # PCA scatter plot
-    plt.figure(figsize=(10, 10))
-    unique_labels = list(set(class_labels))
-    label_to_color = {label: cm.get_cmap("tab20")(i % 20) for i, label in enumerate(unique_labels)}
-    for i, label in enumerate(class_labels):
-        x, y = label_embeddings_2d[i]
-        plt.scatter(x, y, color=label_to_color[label], alpha=0.6, s=24)
-        # Labels are added in W&B table tooltips instead of on the static plot
-    plt.title("PCA Projection of Class Embeddings")
-    plt.xlabel("PC1")
-    plt.ylabel("PC2")
-    plt.legend(fontsize='xx-small', bbox_to_anchor=(1.05, 1), loc='upper left')
-    wandb.log({"PCA Scatter Plot": wandb.Image(plt)})
-    plt.close()
+image_embeddings = torch.stack(averaged_image_embeddings).numpy()
 
-    # Compute t-SNE projection (slower than PCA)
-    tsne_perplexity = min(5, len(class_labels) - 1)
-    tsne = TSNE(n_components=2, perplexity=tsne_perplexity, init='random', random_state=42)
-    label_embeddings_tsne = tsne.fit_transform(label_embeddings.cpu().numpy())
-
-    # Create a W&B table for t-SNE embeddings
-    tsne_table = wandb.Table(columns=["x", "y", "label"])
-    for i, (x, y) in enumerate(label_embeddings_tsne):
-        tsne_table.add_data(x, y, class_labels[i])
-
-    # Log the t-SNE projection
-    wandb.log({"class_embedding_tsne": tsne_table})
-    wandb.log({"t-SNE Hover Plot": wandb.plot_table("wandb/scatter", tsne_table, {"x": "x", "y": "y", "label": "label"})})
-
-    # t-SNE scatter plot
-    plt.figure(figsize=(10, 10))
-    for i, label in enumerate(class_labels):
-        x, y = label_embeddings_tsne[i]
-        plt.scatter(x, y, color=label_to_color[label], alpha=0.6, s=24)
-        # Labels are added in W&B table tooltips instead of on the static plot
-    plt.title("t-SNE Projection of Class Embeddings")
-    plt.xlabel("Dim 1")
-    plt.ylabel("Dim 2")
-    plt.legend(fontsize='xx-small', bbox_to_anchor=(1.05, 1), loc='upper left')
-    wandb.log({"t-SNE Scatter Plot": wandb.Image(plt)})
-    plt.close()
+# Replace t-SNE and PCA with image embeddings
+label_embeddings_2d = compute_pca(image_embeddings, image_labels, label_groups)
+label_embeddings_tsne = compute_tsne(image_embeddings, image_labels, label_groups)
 
 # Construct few-shot prompts
 few_shot_captions = []
-for i, label in enumerate(class_labels):
+for i, label in tqdm(enumerate(class_labels), desc="Generating few-shot prompts", total=len(class_labels)):
     sims = cosine_similarity(label_embeddings[i:i+1].cpu(), label_embeddings.cpu())[0]
     top_indices = sims.argsort()[-4:-1][::-1]  # 3 nearest neighbors
     few_shot = [f"a photo of a {class_labels[j]}." for j in top_indices]
@@ -126,7 +189,7 @@ for i, label in enumerate(class_labels):
     few_shot_captions.append(" ".join(few_shot))
 
 # Log a few class labels with their nearest neighbors
-for i in range(min(5, len(class_labels))):  # Ensure we don’t go out of bounds
+for i in tqdm(range(min(5, len(class_labels))), desc="Logging nearest neighbors"):
     label = class_labels[i]
     sims = cosine_similarity(label_embeddings[i:i+1].cpu(), label_embeddings.cpu())[0]
     top_indices = sims.argsort()[-4:-1][::-1]  # Top 3 neighbors
@@ -159,14 +222,18 @@ with torch.no_grad(), torch.cuda.amp.autocast():
     total_counter = 0
     loss = 0
     text_features = []
-    for t in tqdm(text):
+    for t in tqdm(text, desc="Encoding few-shot text"):
         t_avg = (model.encode_text(t).sum(dim=0) / len(t))
         text_features.append(t_avg)
 
     text_features = torch.stack(text_features)
     text_features /= text_features.norm(dim=-1, keepdim=True)
 
-    for sample in ds:
+    per_class_accuracy = compute_per_class_accuracy(ds, model, preprocess_val, text_features, class_labels)
+    wandb.log({"per_class_accuracy": per_class_accuracy})
+    compute_per_cluster_accuracy(class_labels, cluster_ids, per_class_accuracy)
+
+    for sample in tqdm(ds, desc="Evaluating samples"):
         image = sample["image"]
         label = sample["label"]
         index_label = sample["index_label"]
@@ -199,40 +266,6 @@ with torch.no_grad(), torch.cuda.amp.autocast():
                 }
             })
         total_counter += 1
-
-    from collections import defaultdict
-
-    class_counts = defaultdict(int)
-    class_correct = defaultdict(int)
-
-    for sample in ds:
-        label = sample["label"]
-        index_label = sample["index_label"]
-        class_counts[label] += 1
-        image = preprocess_val(sample["image"]).unsqueeze(0).to(device=device)
-        with torch.no_grad(), torch.cuda.amp.autocast():
-            image_features = model.encode_image(image)
-            image_features /= image_features.norm(dim=-1, keepdim=True)
-            logits = 100.0 * image_features @ text_features.T
-            probs = logits.softmax(dim=-1)
-            pred_index = probs[0].argmax().item()
-            if pred_index == index_label:
-                class_correct[label] += 1
-
-    per_class_accuracy = {label: class_correct[label] / class_counts[label] for label in class_labels if class_counts[label] > 0}
-    wandb.log({"per_class_accuracy": per_class_accuracy})
-
-    # Per-class accuracy bar plot
-    plt.figure(figsize=(12, 4))
-    labels = list(per_class_accuracy.keys())
-    values = [per_class_accuracy[label] for label in labels]
-    plt.bar(labels, values)
-    plt.xticks(rotation=90)
-    plt.xlabel("Class Label")
-    plt.ylabel("Accuracy")
-    plt.title("Per-Class Accuracy")
-    wandb.log({"Per-Class Accuracy Plot": wandb.Image(plt)})
-    plt.close()
 
     print(f"Accuracy: {correct_counter / total_counter * 100:.2f}%")
     print(f"Total samples: {total_counter}, Correct predictions: {correct_counter}")
