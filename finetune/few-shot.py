@@ -13,6 +13,10 @@ import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 import pandas as pd
+from collections import defaultdict
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
 ##===== END OF IMPORTS =====##
 
 ##==== CONFIGURATION ====##
@@ -45,17 +49,10 @@ elif args.dataset == 'imagenet':
     ds = ds["train"]
 
     json_contents = json.load(open("./imagenet_prompts.json"))
-    # Filter dataset to include only examples with valid labels from the prompt set
-    valid_labels = set(json_contents.keys())
-    ds = ds.filter(lambda x: x["label"] in valid_labels)
+    transform_type = "grayscale" if args.grayscale else None
+    ds, classes_to_index, index_to_classes, captions = process_imagenet(ds, json_contents, transform=transform_type)
 
-# Extract valid labels from dataset
-unique_labels_in_ds = set(example["label"] for example in ds)
-valid_labels = list(unique_labels_in_ds & set(json_contents.keys()))
-if not valid_labels:
-    raise ValueError("No overlapping labels between dataset and prompt set.")
-
-class_labels = valid_labels
+class_labels = [index_to_classes[i] for i in range(len(index_to_classes))]
 
 label_prompts = [f"a photo of a {label}" for label in class_labels]
 token_inputs = tokenizer(label_prompts)  # returns LongTensor
@@ -75,6 +72,22 @@ with torch.no_grad():
         embedding_table.add_data(x, y, class_labels[i])
 
     wandb.log({"class_embedding_projection": embedding_table})
+    wandb.log({"PCA Hover Plot": wandb.plot_table("wandb/scatter", embedding_table, {"x": "x", "y": "y", "label": "label"})})
+
+    # PCA scatter plot
+    plt.figure(figsize=(10, 10))
+    unique_labels = list(set(class_labels))
+    label_to_color = {label: cm.get_cmap("tab20")(i % 20) for i, label in enumerate(unique_labels)}
+    for i, label in enumerate(class_labels):
+        x, y = label_embeddings_2d[i]
+        plt.scatter(x, y, color=label_to_color[label], alpha=0.6, s=24)
+        # Labels are added in W&B table tooltips instead of on the static plot
+    plt.title("PCA Projection of Class Embeddings")
+    plt.xlabel("PC1")
+    plt.ylabel("PC2")
+    plt.legend(fontsize='xx-small', bbox_to_anchor=(1.05, 1), loc='upper left')
+    wandb.log({"PCA Scatter Plot": wandb.Image(plt)})
+    plt.close()
 
     # Compute t-SNE projection (slower than PCA)
     tsne_perplexity = min(5, len(class_labels) - 1)
@@ -88,6 +101,20 @@ with torch.no_grad():
 
     # Log the t-SNE projection
     wandb.log({"class_embedding_tsne": tsne_table})
+    wandb.log({"t-SNE Hover Plot": wandb.plot_table("wandb/scatter", tsne_table, {"x": "x", "y": "y", "label": "label"})})
+
+    # t-SNE scatter plot
+    plt.figure(figsize=(10, 10))
+    for i, label in enumerate(class_labels):
+        x, y = label_embeddings_tsne[i]
+        plt.scatter(x, y, color=label_to_color[label], alpha=0.6, s=24)
+        # Labels are added in W&B table tooltips instead of on the static plot
+    plt.title("t-SNE Projection of Class Embeddings")
+    plt.xlabel("Dim 1")
+    plt.ylabel("Dim 2")
+    plt.legend(fontsize='xx-small', bbox_to_anchor=(1.05, 1), loc='upper left')
+    wandb.log({"t-SNE Scatter Plot": wandb.Image(plt)})
+    plt.close()
 
 # Construct few-shot prompts
 few_shot_captions = []
@@ -106,9 +133,9 @@ for i in range(min(5, len(class_labels))):  # Ensure we don’t go out of bounds
     neighbor_labels = [class_labels[j] for j in top_indices]
     wandb.log({f"{label}_neighbors": neighbor_labels})
 
-if args.grayscale:
-    print("Converting images to grayscale")
-    ds = ds.map(lambda x: {"image": x["image"].convert("L")})
+# if args.grayscale:
+#    print("Converting images to grayscale")
+#    ds = ds.map(lambda x: {"image": x["image"].convert("L")})
 
 ##==== END OF IMAGE PREPROCESSING ====##
 
@@ -142,7 +169,7 @@ with torch.no_grad(), torch.cuda.amp.autocast():
     for sample in ds:
         image = sample["image"]
         label = sample["label"]
-        index_label = class_labels.index(label)
+        index_label = sample["index_label"]
         image = preprocess_val(image).unsqueeze(0).to(device=device)
         
         image_features = model.encode_image(image)
@@ -163,8 +190,57 @@ with torch.no_grad(), torch.cuda.amp.autocast():
         else:
             print(f"Incorrectly Predicted: {index_to_classes[index]}, Actual: {label}, Probability: {max_prob.item():.4f}")
             print(f"Top 5 Predictions: {[index_to_classes[i] for i in top_five_indices.tolist()]}")
+            wandb.log({
+                "misclassified_sample": {
+                    "predicted": index_to_classes[index],
+                    "actual": label,
+                    "top_5_predictions": [index_to_classes[i] for i in top_five_indices.tolist()],
+                    "probability": max_prob.item()
+                }
+            })
         total_counter += 1
+
+    from collections import defaultdict
+
+    class_counts = defaultdict(int)
+    class_correct = defaultdict(int)
+
+    for sample in ds:
+        label = sample["label"]
+        index_label = sample["index_label"]
+        class_counts[label] += 1
+        image = preprocess_val(sample["image"]).unsqueeze(0).to(device=device)
+        with torch.no_grad(), torch.cuda.amp.autocast():
+            image_features = model.encode_image(image)
+            image_features /= image_features.norm(dim=-1, keepdim=True)
+            logits = 100.0 * image_features @ text_features.T
+            probs = logits.softmax(dim=-1)
+            pred_index = probs[0].argmax().item()
+            if pred_index == index_label:
+                class_correct[label] += 1
+
+    per_class_accuracy = {label: class_correct[label] / class_counts[label] for label in class_labels if class_counts[label] > 0}
+    wandb.log({"per_class_accuracy": per_class_accuracy})
+
+    # Per-class accuracy bar plot
+    plt.figure(figsize=(12, 4))
+    labels = list(per_class_accuracy.keys())
+    values = [per_class_accuracy[label] for label in labels]
+    plt.bar(labels, values)
+    plt.xticks(rotation=90)
+    plt.xlabel("Class Label")
+    plt.ylabel("Accuracy")
+    plt.title("Per-Class Accuracy")
+    wandb.log({"Per-Class Accuracy Plot": wandb.Image(plt)})
+    plt.close()
 
     print(f"Accuracy: {correct_counter / total_counter * 100:.2f}%")
     print(f"Total samples: {total_counter}, Correct predictions: {correct_counter}")
     print(f"Average Loss: {loss / total_counter:.4f}")
+
+    wandb.log({
+        "accuracy": correct_counter / total_counter,
+        "total_samples": total_counter,
+        "correct_predictions": correct_counter,
+        "average_loss": loss / total_counter
+    })
