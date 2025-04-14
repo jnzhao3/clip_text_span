@@ -14,6 +14,8 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 import pandas as pd
 from collections import defaultdict
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
 ##===== END OF IMPORTS =====##
 
@@ -70,6 +72,22 @@ with torch.no_grad():
         embedding_table.add_data(x, y, class_labels[i])
 
     wandb.log({"class_embedding_projection": embedding_table})
+    wandb.log({"PCA Hover Plot": wandb.plot_table("wandb/scatter", embedding_table, {"x": "x", "y": "y", "label": "label"})})
+
+    # PCA scatter plot
+    plt.figure(figsize=(10, 10))
+    unique_labels = list(set(class_labels))
+    label_to_color = {label: cm.get_cmap("tab20")(i % 20) for i, label in enumerate(unique_labels)}
+    for i, label in enumerate(class_labels):
+        x, y = label_embeddings_2d[i]
+        plt.scatter(x, y, color=label_to_color[label], alpha=0.6, s=24)
+        # Labels are added in W&B table tooltips instead of on the static plot
+    plt.title("PCA Projection of Class Embeddings")
+    plt.xlabel("PC1")
+    plt.ylabel("PC2")
+    plt.legend(fontsize='xx-small', bbox_to_anchor=(1.05, 1), loc='upper left')
+    wandb.log({"PCA Scatter Plot": wandb.Image(plt)})
+    plt.close()
 
     # Compute t-SNE projection (slower than PCA)
     tsne_perplexity = min(5, len(class_labels) - 1)
@@ -83,6 +101,20 @@ with torch.no_grad():
 
     # Log the t-SNE projection
     wandb.log({"class_embedding_tsne": tsne_table})
+    wandb.log({"t-SNE Hover Plot": wandb.plot_table("wandb/scatter", tsne_table, {"x": "x", "y": "y", "label": "label"})})
+
+    # t-SNE scatter plot
+    plt.figure(figsize=(10, 10))
+    for i, label in enumerate(class_labels):
+        x, y = label_embeddings_tsne[i]
+        plt.scatter(x, y, color=label_to_color[label], alpha=0.6, s=24)
+        # Labels are added in W&B table tooltips instead of on the static plot
+    plt.title("t-SNE Projection of Class Embeddings")
+    plt.xlabel("Dim 1")
+    plt.ylabel("Dim 2")
+    plt.legend(fontsize='xx-small', bbox_to_anchor=(1.05, 1), loc='upper left')
+    wandb.log({"t-SNE Scatter Plot": wandb.Image(plt)})
+    plt.close()
 
 # Construct few-shot prompts
 few_shot_captions = []
@@ -189,6 +221,18 @@ with torch.no_grad(), torch.cuda.amp.autocast():
 
     per_class_accuracy = {label: class_correct[label] / class_counts[label] for label in class_labels if class_counts[label] > 0}
     wandb.log({"per_class_accuracy": per_class_accuracy})
+
+    # Per-class accuracy bar plot
+    plt.figure(figsize=(12, 4))
+    labels = list(per_class_accuracy.keys())
+    values = [per_class_accuracy[label] for label in labels]
+    plt.bar(labels, values)
+    plt.xticks(rotation=90)
+    plt.xlabel("Class Label")
+    plt.ylabel("Accuracy")
+    plt.title("Per-Class Accuracy")
+    wandb.log({"Per-Class Accuracy Plot": wandb.Image(plt)})
+    plt.close()
 
     print(f"Accuracy: {correct_counter / total_counter * 100:.2f}%")
     print(f"Total samples: {total_counter}, Correct predictions: {correct_counter}")
