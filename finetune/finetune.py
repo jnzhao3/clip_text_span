@@ -175,7 +175,7 @@ if __name__ == "__main__":
     tokenizer = open_clip.get_tokenizer(args.clip_model)
 
     if args.dataset == 'imagenet':
-        ds = load_dataset("imagenet-1k", split="train", trust_remote_code=True) # TODO: change to full dataset if necessary. Or shuffle being grabbing only 1000.
+        ds = load_dataset("imagenet-1k", split="train", trust_remote_code=True).shuffle(seed=42) # TODO: change to full dataset if necessary. Or shuffle being grabbing only 1000.
         ds = ds.shuffle(seed=42)
         ds = ds.select(range(130000))
         json_contents = json.load(open("./imagenet_prompts.json"))

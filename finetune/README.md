@@ -24,7 +24,7 @@ ds = load_dataset("sasha/birdsnap")
 huggingface-cli login
 ```
 * Use access token from huggingface to authenticate.
-* Run `python zero-shot.py --dataset imagenet`. Takes a while the first time.
+* Run `python zero-shot.py --dataset imagenet_sketch`. Takes a while the first time.
 
 ```
 python zero-shot.py

@@ -1,0 +1,134 @@
+{
+  "os": "Linux-5.4.0-37-generic-x86_64-with-glibc2.27",
+  "python": "CPython 3.12.9",
+  "startedAt": "2025-04-12T23:37:32.468758Z",
+  "args": [
+    "--dataset",
+    "imagenet_sketch"
+  ],
+  "program": "/home/eecs/shuoyuan/proj/clip_text_span/finetune/finetune.py",
+  "codePath": "finetune/finetune.py",
+  "git": {
+    "remote": "https://github.com/jnzhao3/clip_text_span.git",
+    "commit": "ceee5244b68a5a0f5ca20d63f5b5c696f38f8e1e"
+  },
+  "email": "shuoyuan@berkeley.edu",
+  "root": "/home/eecs/shuoyuan/proj/clip_text_span/finetune",
+  "host": "ace",
+  "executable": "/home/eecs/shuoyuan/miniconda3/envs/prsclip/bin/python",
+  "codePathLocal": "finetune.py",
+  "cpu_count": 40,
+  "cpu_count_logical": 80,
+  "gpu": "Quadro RTX 6000",
+  "gpu_count": 8,
+  "disk": {
+    "/": {
+      "total": "34359738368",
+      "used": "27990056960"
+    }
+  },
+  "memory": {
+    "total": "540688560128"
+  },
+  "cpu": {
+    "count": 40,
+    "countLogical": 80
+  },
+  "gpu_nvidia": [
+    {
+      "name": "Quadro RTX 6000",
+      "memoryTotal": "25769803776",
+      "cudaCores": 4608,
+      "architecture": "Turing"
+    },
+    {
+      "name": "Quadro RTX 6000",
+      "memoryTotal": "25769803776",
+      "cudaCores": 4608,
+      "architecture": "Turing"
+    },
+    {
+      "name": "Quadro RTX 6000",
+      "memoryTotal": "25769803776",
+      "cudaCores": 4608,
+      "architecture": "Turing"
+    },
+    {
+      "name": "Quadro RTX 6000",
+      "memoryTotal": "25769803776",
+      "cudaCores": 4608,
+      "architecture": "Turing"
+    },
+    {
+      "name": "Quadro RTX 6000",
+      "memoryTotal": "25769803776",
+      "cudaCores": 4608,
+      "architecture": "Turing"
+    },
+    {
+      "name": "Quadro RTX 6000",
+      "memoryTotal": "25769803776",
+      "cudaCores": 4608,
+      "architecture": "Turing"
+    },
+    {
+      "name": "Quadro RTX 6000",
+      "memoryTotal": "25769803776",
+      "cudaCores": 4608,
+      "architecture": "Turing"
+    },
+    {
+      "name": "Quadro RTX 6000",
+      "memoryTotal": "25769803776",
+      "cudaCores": 4608,
+      "architecture": "Turing"
+    }
+  ],
+  "slurm": {
+    "checkpoint_image_dir": "/var/slurm/checkpoint",
+    "cluster_name": "rise",
+    "cpus_on_node": "80",
+    "gtids": "0",
+    "job_cpus_per_node": "80",
+    "job_gid": "3837",
+    "job_id": "275538",
+    "job_name": "bash",
+    "job_nodelist": "ace",
+    "job_num_nodes": "1",
+    "job_partition": "rise",
+    "job_qos": "normal",
+    "job_uid": "200898",
+    "job_user": "shuoyuan",
+    "jobid": "275538",
+    "launch_node_ipaddr": "169.229.48.125",
+    "localid": "0",
+    "nnodes": "1",
+    "nodeid": "0",
+    "nodelist": "ace",
+    "nprocs": "1",
+    "ntasks": "1",
+    "prio_process": "0",
+    "procid": "0",
+    "pty_port": "33129",
+    "pty_win_col": "131",
+    "pty_win_row": "11",
+    "srun_comm_host": "169.229.48.125",
+    "srun_comm_port": "38715",
+    "step_id": "0",
+    "step_launcher_port": "38715",
+    "step_nodelist": "ace",
+    "step_num_nodes": "1",
+    "step_num_tasks": "1",
+    "step_tasks_per_node": "1",
+    "stepid": "0",
+    "submit_dir": "/home/eecs/shuoyuan/proj/clip_text_span/finetune",
+    "submit_host": "havoc",
+    "task_pid": "15492",
+    "tasks_per_node": "1",
+    "topology_addr": "ace",
+    "topology_addr_pattern": "node",
+    "umask": "0077",
+    "working_cluster": "rise:watson:6817:8192"
+  },
+  "cudaVersion": "12.1"
+}

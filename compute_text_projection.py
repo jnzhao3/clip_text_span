@@ -16,6 +16,7 @@ import tqdm
 from utils.factory import create_model_and_transforms, get_tokenizer
 from utils.openai_templates import OPENAI_IMAGENET_TEMPLATES
 from utils.imagenet_classes import imagenet_classes
+from utils.cifar100_classes import cifar100_classes
 from utils.cub_classes import cub_classes, waterbird_classes
 
 
@@ -90,6 +91,7 @@ def main(args):
         'imagenet': imagenet_classes, 
         'waterbirds': cub_classes, 
         'binary_waterbirds': waterbird_classes, 
+        'CIFAR100': cifar100_classes,
         'cub': cub_classes}[args.dataset]
     classifier = zero_shot_classifier(model, tokenizer, classes, OPENAI_IMAGENET_TEMPLATES, args.device)
     with open(os.path.join(args.output_dir, f'{args.dataset}_classifier_{args.model}.npy'), 'wb') as f:

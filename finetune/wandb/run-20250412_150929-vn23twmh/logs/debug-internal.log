@@ -1,0 +1,15 @@
+{"time":"2025-04-12T15:09:29.800644268-07:00","level":"INFO","msg":"stream: starting","core version":"0.19.9","symlink path":"/home/eecs/shuoyuan/proj/clip_text_span/finetune/wandb/run-20250412_150929-vn23twmh/logs/debug-core.log"}
+{"time":"2025-04-12T15:09:30.144007667-07:00","level":"INFO","msg":"created new stream","id":"vn23twmh"}
+{"time":"2025-04-12T15:09:30.144107453-07:00","level":"INFO","msg":"stream: started","id":"vn23twmh"}
+{"time":"2025-04-12T15:09:30.144167314-07:00","level":"INFO","msg":"writer: Do: started","stream_id":"vn23twmh"}
+{"time":"2025-04-12T15:09:30.144203877-07:00","level":"INFO","msg":"sender: started","stream_id":"vn23twmh"}
+{"time":"2025-04-12T15:09:30.144273669-07:00","level":"INFO","msg":"handler: started","stream_id":"vn23twmh"}
+{"time":"2025-04-12T15:09:30.298483409-07:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-04-12T15:12:01.226708055-07:00","level":"INFO","msg":"stream: closing","id":"vn23twmh"}
+{"time":"2025-04-12T15:12:01.226769164-07:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2025-04-12T15:12:01.226814808-07:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2025-04-12T15:12:01.656800611-07:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-04-12T15:12:01.773109276-07:00","level":"INFO","msg":"handler: closed","stream_id":"vn23twmh"}
+{"time":"2025-04-12T15:12:01.773156925-07:00","level":"INFO","msg":"writer: Close: closed","stream_id":"vn23twmh"}
+{"time":"2025-04-12T15:12:01.773176679-07:00","level":"INFO","msg":"sender: closed","stream_id":"vn23twmh"}
+{"time":"2025-04-12T15:12:01.774398725-07:00","level":"INFO","msg":"stream: closed","id":"vn23twmh"}
