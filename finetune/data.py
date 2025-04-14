@@ -1,6 +1,7 @@
 import torch
 from datasets import Dataset, Image
 import json
+from PIL import ImageOps
 ##==== END OF IMPORTS ====##
 
 ##==== README ====##
@@ -21,7 +22,7 @@ def one_hot(n, i):
     t[i] = 1
     return t
 
-def process_imagenet(dataset, json):
+def process_imagenet(dataset, json, transform=None):
     '''
     ds['train'][0]
     {'image': <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=817x363 at 0x7F58FED23B90>, 'label': 726}
@@ -33,7 +34,17 @@ def process_imagenet(dataset, json):
     dataset = dataset.cast_column("image", Image())
     # dataset = dataset.map(lambda x: {"index_label": x["label"]})
     dataset = dataset.rename_column("label", "index_label")
-    dataset = dataset.map(lambda x: {"label": index_to_classes[x["index_label"]]})
+    if transform == "grayscale":
+        image_map = lambda x: x.convert("L")
+    elif transform == "invert":
+        image_map = lambda x: ImageOps.invert(x)
+    elif transform == "posterize":
+        image_map = lambda x: ImageOps.posterize(x, bits=2)
+    else:
+        image_map = lambda x: {"image": x["image"]}
+    dataset = dataset.map(lambda x: {"label": index_to_classes[x["index_label"]], "image": image_map(x["image"])})
+    # if grayscale:
+    #     dataset = dataset.map(lambda x: {"image": x["image"].convert("L")})
 
     templates = json["templates"]
     captions = []

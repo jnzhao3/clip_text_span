@@ -63,3 +63,15 @@ parser.add_argument('--eval_interval', type=int, default=2, help='Training evalu
 ```
 python finetune.py --dataset imagenet --batch_size 32 --epochs 30 --model_save_interval 10 --eval_interval 10 --run_name name-of-wandb-run
 ```
+
+## Transforms
+
+* Can now add different transformations to finetune or zero-shot, use:
+
+```
+--transform grayscale
+--transform invert
+--transform posterize
+```
+
+* Note: currently, can only use one transformation at a time.
