@@ -22,6 +22,50 @@ def one_hot(n, i):
     t[i] = 1
     return t
 
+def process_cifar100(dataset, json, transform=None):
+    '''
+    {
+    'img': PIL.Image.Image,
+    'fine_label': 0,
+    'coarse_label': 5
+    }'''
+    classes = json["classes"]
+    classes_to_index = {classes[i]: i for i in range(len(classes))}
+    index_to_classes = {i: classes[i] for i in range(len(classes))}
+
+    assert len(classes) == 100, "CIFAR100 dataset should have 100 classes"
+
+    dataset = dataset.cast_column("img", Image())
+    dataset = dataset.rename_column("img", "image")
+    dataset = dataset.rename_column("fine_label", "index_label")
+    def image_map(image):
+        if transform == "grayscale":
+            return image.convert("L").convert("RGB")  # Convert back to RGB to keep shape
+        elif transform == "invert":
+            return ImageOps.invert(image)
+        elif transform == "posterize":
+            return ImageOps.posterize(image, bits=2)
+        else:
+            return image  # No transformation
+
+    # Map over the dataset
+    dataset = dataset.map(
+        lambda x: {
+            "label": index_to_classes[x["index_label"]],
+            "image": image_map(x["image"]),
+        }
+    )
+
+    templates = json["templates"]
+    captions = []
+    for i in range(len(classes)):
+        t = []
+        for j in range(len(templates)):
+            t.append(templates[j][0] + classes[i] + templates[j][1])
+        captions.append(t)
+    
+    return dataset, classes_to_index, index_to_classes, captions
+
 def process_imagenet(dataset, json, transform=None):
     '''
     ds['train'][0]

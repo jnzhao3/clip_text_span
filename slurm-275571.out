@@ -1,18 +1,0 @@
-/home/eecs/shuoyuan/proj/clip_text_span
-ace
-Sun Apr 13 14:44:31 PDT 2025
-starting job...
-The token has not been saved to the git credentials helper. Pass `add_to_git_credential=True` in this function directly or `--add-to-git-credential` if using via `huggingface-cli` if you want to set the git credential as well.
-Token is valid (permission: fineGrained).
-The token `imagenet` has been saved to /home/eecs/shuoyuan/../../../data/wong.justin/openalphaproof/.cache/huggingface/stored_tokens
-Your token has been saved to /home/eecs/shuoyuan/../../../data/wong.justin/openalphaproof/.cache/huggingface/token
-Login successful.
-Note: Environment variable`HF_TOKEN` is set and is the current active token independently from the token you've just configured.
-/home/eecs/shuoyuan/miniconda3/envs/prsclip/lib/python3.12/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
-  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
-Model parameters: 427,616,513
-Context length: 77
-Vocab size: 49408
-/home/eecs/shuoyuan/proj/clip_text_span/compute_text_projection.py:65: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
-  with torch.no_grad(), autocast():
-  0%|          | 0/100 [00:00<?, ?it/s]  1%|          | 1/100 [00:02<03:23,  2.06s/it]  3%|▎         | 3/100 [00:02<00:55,  1.75it/s]  5%|▌         | 5/100 [00:02<00:28,  3.29it/s]  7%|▋         | 7/100 [00:02<00:18,  5.08it/s] 10%|█         | 10/100 [00:02<00:11,  7.99it/s] 13%|█▎        | 13/100 [00:02<00:08, 10.74it/s] 16%|█▌        | 16/100 [00:02<00:06, 13.19it/s] 19%|█▉        | 19/100 [00:02<00:05, 15.23it/s] 22%|██▏       | 22/100 [00:03<00:04, 16.88it/s] 25%|██▌       | 25/100 [00:03<00:04, 18.16it/s] 28%|██▊       | 28/100 [00:03<00:03, 19.14it/s] 31%|███       | 31/100 [00:03<00:03, 19.87it/s] 34%|███▍      | 34/100 [00:03<00:03, 20.39it/s] 37%|███▋      | 37/100 [00:03<00:03, 20.78it/s] 40%|████      | 40/100 [00:03<00:02, 21.02it/s] 43%|████▎     | 43/100 [00:04<00:02, 21.21it/s] 46%|████▌     | 46/100 [00:04<00:02, 21.35it/s] 49%|████▉     | 49/100 [00:04<00:02, 21.43it/s] 52%|█████▏    | 52/100 [00:04<00:02, 21.50it/s] 55%|█████▌    | 55/100 [00:04<00:02, 21.55it/s] 58%|█████▊    | 58/100 [00:04<00:01, 21.58it/s] 61%|██████    | 61/100 [00:04<00:01, 21.58it/s] 64%|██████▍   | 64/100 [00:04<00:01, 21.60it/s] 67%|██████▋   | 67/100 [00:05<00:01, 21.64it/s] 70%|███████   | 70/100 [00:05<00:01, 21.66it/s] 73%|███████▎  | 73/100 [00:05<00:01, 21.67it/s] 76%|███████▌  | 76/100 [00:05<00:01, 21.68it/s] 79%|███████▉  | 79/100 [00:05<00:00, 21.66it/s] 82%|████████▏ | 82/100 [00:05<00:00, 21.63it/s] 85%|████████▌ | 85/100 [00:05<00:00, 21.40it/s] 88%|████████▊ | 88/100 [00:06<00:00, 21.30it/s] 91%|█████████ | 91/100 [00:06<00:00, 21.37it/s] 94%|█████████▍| 94/100 [00:06<00:00, 21.42it/s] 97%|█████████▋| 97/100 [00:06<00:00, 21.45it/s]100%|██████████| 100/100 [00:06<00:00, 21.53it/s]100%|██████████| 100/100 [00:06<00:00, 15.00it/s]

@@ -6,7 +6,8 @@ import json
 import argparse
 import wandb
 from tqdm import tqdm
-from data import process_birds, process_imagenet
+import torchvision.transforms as transforms
+from data import process_birds, process_imagenet, process_cifar100
 from torch import nn
 ##===== END OF IMPORTS =====##
 
@@ -40,6 +41,16 @@ elif args.dataset == 'imagenet_sketch':
     ds = ds.select(range(1000))
     json_contents = json.load(open("./imagenet_prompts.json"))
     ds, classes_to_index, index_to_classes, captions = process_imagenet(ds, json_contents, transform=args.transform)
+elif args.dataset == 'cifar100':
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+        ])
+        # ds = datasets.CIFAR100(root="./data", train=True, download=True, transform=transform)
+        ds = load_dataset("cifar100", split="train", trust_remote_code=True)
+        ds = ds.shuffle(seed=42)
+        ds = ds.select(range(1000))
+        json_contents = json.load(open("./cifar100_prompts.json"))
+        ds, classes_to_index, index_to_classes, captions = process_cifar100(ds, json_contents, transform=args.transform)
 
 # if args.grayscale:
 #     print("Converting images to grayscale")

@@ -7,3 +7,4 @@ run/
 artifacts
 *.pt
 *.sh
+data

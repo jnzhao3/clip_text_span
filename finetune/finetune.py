@@ -10,7 +10,7 @@ from torchvision import datasets
 import torchvision.transforms as transforms
 from datasets import Dataset, Image, load_dataset
 import json
-from data import process_birds, process_imagenet
+from data import process_birds, process_imagenet, process_cifar100
 from tqdm import tqdm
 from torch.amp import autocast, GradScaler
 import tempfile
@@ -106,12 +106,11 @@ class Finetuner():
                     scaler.update()
 
                 loss_avg += loss.detach().cpu().numpy().item()
-
                 counter += 1
             loss_avg = loss_avg / counter
             wandb.log({"epoch": epoch, "average loss": loss_avg})
 
-            if epoch % self.model_save_interval == 0:
+            if epoch != 0 and epoch % self.model_save_interval == 0:
                 self.save_checkpoint(epoch)
 
             if epoch % self.eval_interval == 0:
@@ -176,10 +175,19 @@ if __name__ == "__main__":
 
     if args.dataset == 'imagenet':
         ds = load_dataset("imagenet-1k", split="train", trust_remote_code=True).shuffle(seed=42) # TODO: change to full dataset if necessary. Or shuffle being grabbing only 1000.
-        ds = ds.shuffle(seed=42)
+        # ds = ds.shuffle(seed=42)
         ds = ds.select(range(130000))
         json_contents = json.load(open("./imagenet_prompts.json"))
         ds, classes_to_index, index_to_classes, captions = process_imagenet(ds, json_contents, transform=args.transform)
+    elif args.dataset == 'cifar100':
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+        ])
+        # ds = datasets.CIFAR100(root="./data", train=True, download=True, transform=transform)
+        ds = load_dataset("cifar100", split="train", trust_remote_code=True)
+        ds = ds.shuffle(seed=42)
+        json_contents = json.load(open("./cifar100_prompts.json"))
+        ds, classes_to_index, index_to_classes, captions = process_cifar100(ds, json_contents, transform=args.transform)
 
     finetuner = Finetuner(
         model=model,
