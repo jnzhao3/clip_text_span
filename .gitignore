@@ -6,5 +6,4 @@ imagenet_seg/
 run/
 artifacts
 *.pt
-
-output_dir
+*.sh
