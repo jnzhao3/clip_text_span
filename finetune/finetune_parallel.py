@@ -14,6 +14,9 @@ from data import process_birds, process_imagenet
 from tqdm import tqdm
 from torch.amp import autocast, GradScaler
 import tempfile
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
+import os
 ##==== END OF IMPORTS ====##
 
 ##==== CONFIGURATION ====##
@@ -26,18 +29,19 @@ parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
 parser.add_argument('--epochs', type=int, default=20, help='Number of epochs')
 parser.add_argument('--model_save_interval', type=int, default=5, help='Model save interval')
 parser.add_argument('--eval_interval', type=int, default=2, help='Training evaluation interval')
+parser.add_argument('--local_rank', type=int, default=0, help='Local rank for distributed training')
 ##===== END OF CONFIGURATION ====##
 
 ##===== FINETUNING SCRIPT =====##
 class Finetuner():
 
-    def __init__(self, model, tokenizer, preprocess_train, preprocess_val, dataset, classes_to_index, index_to_classes, captions, epochs, batch_size, wandb_project, wandb_run_name, model_save_interval, eval_interval):
+    def __init__(self, model, tokenizer, preprocess_train, preprocess_val, dataset, classes_to_index, index_to_classes, captions, epochs, batch_size, wandb_project, wandb_run_name, model_save_interval, eval_interval, local_rank):
         self.model = model
         self.tokenizer = tokenizer
         self.preprocess_train = preprocess_train
         self.preprocess_val = preprocess_val
 
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda", local_rank)
         print(f"Using device: {self.device}")
         self.model = self.model.to(self.device)
         self.epochs = epochs
@@ -45,13 +49,14 @@ class Finetuner():
         self.eval_interval = eval_interval
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=1e-5)
-        if wandb_run_name:
-            wandb.init(project=wandb_project, name=wandb_run_name, config=args)
-        else:
-            wandb.init(project=wandb_project, config=args)
+        if dist.get_rank() == 0:
+            if wandb_run_name:
+                wandb.init(project=wandb_project, name=wandb_run_name, config=args)
+            else:
+                wandb.init(project=wandb_project, config=args)
 
-        images = [wandb.Image(dataset[i]["image"], caption=f"Label: {dataset[i]['label']}") for i in range(5)]
-        wandb.log({"train_images": images})
+            images = [wandb.Image(dataset[i]["image"], caption=f"Label: {dataset[i]['label']}") for i in range(5)]
+            wandb.log({"train_images": images})
 
         dataset = dataset.map(lambda x : {"image" : self.preprocess_train(x["image"])})
         dataset.set_format(type="torch")
@@ -61,9 +66,11 @@ class Finetuner():
         # Random split
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
-
-        self.train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        self.val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+        val_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset, shuffle=False)
+        self.train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler)
+        self.val_loader = DataLoader(val_dataset, batch_size=batch_size, sampler=val_sampler)
+        self.train_sampler = train_sampler
 
         text = []
         for class_caption in captions:
@@ -72,7 +79,7 @@ class Finetuner():
         with torch.no_grad(), torch.cuda.amp.autocast():
             text_features = []
             for t in text:
-                t_avg = (self.model.encode_text(t).sum(dim=0) / len(t))
+                t_avg = (self.model.module.encode_text(t).sum(dim=0) / len(t))
                 text_features.append(t_avg)
             text_features = torch.stack(text_features)
             self.text_features = text_features / text_features.norm(dim=-1, keepdim=True)
@@ -86,6 +93,7 @@ class Finetuner():
         scaler = GradScaler()
         print("Starting training...")
         for epoch in range(self.epochs):
+            self.train_sampler.set_epoch(epoch)
             self.model.train()
             loss_avg = 0
             counter = 0
@@ -94,7 +102,7 @@ class Finetuner():
                 index_labels = sample["index_label"].to(self.device, non_blocking=True)
                 self.optimizer.zero_grad()
                 with autocast(device_type=self.device.type):
-                    images_features = model.encode_image(images)
+                    images_features = self.model.module.encode_image(images)
                     images_features_normalized = images_features / images_features.norm(dim=-1, keepdim=True)                    
                     logits = (100.0 * images_features_normalized @ self.text_features.T)
                 
@@ -108,7 +116,8 @@ class Finetuner():
 
                 counter += 1
             loss_avg = loss_avg / counter
-            wandb.log({"epoch": epoch, "average loss": loss_avg})
+            if dist.get_rank() == 0:
+                wandb.log({"epoch": epoch, "average loss": loss_avg})
 
             if epoch % self.model_save_interval == 0:
                 self.save_checkpoint(epoch)
@@ -122,7 +131,7 @@ class Finetuner():
                         images = sample["image"].to(self.device, non_blocking=True)
                         index_labels = sample["index_label"].to(self.device, non_blocking=True)
                         with autocast(device_type=self.device.type):
-                            images_features = model.encode_image(images)
+                            images_features = self.model.module.encode_image(images)
                             images_features_normalized = images_features / images_features.norm(dim=-1, keepdim=True)                    
                             logits = (100.0 * images_features_normalized @ self.text_features.T)
                         
@@ -131,24 +140,9 @@ class Finetuner():
                         val_loss += loss.detach().cpu().numpy().item()
                         val_counter += 1
                     val_loss = val_loss / val_counter
-                    wandb.log({"epoch": epoch, "val_loss": val_loss})
-                    print(f"Validation loss: {val_loss}")
-
-    # def save_checkpoint(self, epoch):
-    #     '''
-    #     Saves the model checkpoint.
-    #     '''
-    #     checkpoint_path = f"checkpoint_epoch_{epoch}.pt"
-    #     torch.save({
-    #         'epoch': epoch,
-    #         'model_state_dict': self.model.state_dict(),
-    #         'optimizer_state_dict': self.optimizer.state_dict()
-    #     }, checkpoint_path)
-
-    #     # Log checkpoint to wandb
-    #     artifact = wandb.Artifact('model-checkpoints', type='model')
-    #     artifact.add_file(checkpoint_path)
-    #     wandb.log_artifact(artifact)
+                    if dist.get_rank() == 0:
+                        wandb.log({"epoch": epoch, "val_loss": val_loss})
+                        print(f"Validation loss: {val_loss}")
 
     def save_checkpoint(self, epoch):
         '''
@@ -163,18 +157,27 @@ class Finetuner():
             }, tmp.name)
 
             # Log checkpoint to W&B
-            artifact = wandb.Artifact('model-checkpoints', type='model') # TODO: change to a more specific name
+            artifact = wandb.Artifact('model-checkpoints', type='model')
             artifact.add_file(tmp.name, name=f"checkpoint_epoch_{epoch}.pt")
-            wandb.log_artifact(artifact)
+            if dist.get_rank() == 0:
+                wandb.log_artifact(artifact)
 
 if __name__ == "__main__":
     # Parse arguments
     args = parser.parse_args()
+    dist.init_process_group(backend='nccl')
+    local_rank = int(os.environ["LOCAL_RANK"])
+    torch.cuda.set_device(local_rank)
+    device = torch.device("cuda", local_rank)
     model, preprocess_train, preprocess_val = open_clip.create_model_and_transforms(args.clip_model)
+    model = model.to(device)
+    model = DDP(model, device_ids=[local_rank])
     tokenizer = open_clip.get_tokenizer(args.clip_model)
 
     if args.dataset == 'imagenet':
-        ds = load_dataset("imagenet-1k", split="train[:1000]", trust_remote_code=True) # TODO: change to full dataset if necessary. Or shuffle being grabbing only 1000.
+        # ds = load_dataset("imagenet-1k", split="train[:1000]", trust_remote_code=True) # TODO: change to full dataset if necessary.
+        ds = load_dataset("songweig/imagenet_sketch", split="train[:1000]", trust_remote_code=True)
+
         json_contents = json.load(open("./imagenet_prompts.json"))
         ds, classes_to_index, index_to_classes, captions = process_imagenet(ds, json_contents)
 
@@ -192,6 +195,7 @@ if __name__ == "__main__":
         wandb_project=args.wandb_project,
         wandb_run_name=args.run_name,
         model_save_interval=args.model_save_interval,
-        eval_interval=args.eval_interval
+        eval_interval=args.eval_interval,
+        local_rank=local_rank  # <-- Add this line
     )
     finetuner.train()

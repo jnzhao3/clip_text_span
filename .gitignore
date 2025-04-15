@@ -8,3 +8,4 @@ artifacts
 *.pt
 
 output_dir
+finetune/wandb/
