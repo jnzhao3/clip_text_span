@@ -1,12 +1,22 @@
+"""
+Few-Shot Image Classification with CLIP
+
+This script computes few-shot classification prompts for each class in a dataset
+(e.g., CIFAR-100) using image embeddings from a CLIP model. It constructs prompts 
+using the 3 most visually similar images (based on cosine similarity) and evaluates 
+model accuracy using these prompts. Results and metrics are logged to Weights & Biases (W&B).
+"""
+
 import torch
 from PIL import Image
 import open_clip
 from datasets import Dataset, Image, load_dataset
+import datasets
 import json
 import argparse
 import wandb
 from tqdm import tqdm
-from data import process_birds, process_imagenet
+from data import process_birds, process_imagenet, process_cifar100
 from torch import nn
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
@@ -19,6 +29,7 @@ import matplotlib.cm as cm
 import scipy.cluster.hierarchy as sch
 import seaborn as sns
 from sklearn.cluster import AgglomerativeClustering
+import torchvision.transforms as transforms
 
 ##===== END OF IMPORTS =====##
 
@@ -82,8 +93,8 @@ def compute_per_class_accuracy(ds, model, preprocess_fn, text_features, class_la
         image = preprocess_fn(sample["image"]).unsqueeze(0).to(device)
         with torch.no_grad(), torch.cuda.amp.autocast():
             image_features = model.encode_image(image)
-            image_features /= image_features.norm(dim=-1, keepdim=True)
-            logits = 100.0 * image_features @ text_features.T
+            image_features /= image_features.norm(dim=-1, keepdim=True)  # Normalize image embedding
+            logits = 100.0 * image_features @ text_features.T  # Compute similarity scores
             probs = logits.softmax(dim=-1)
             pred_index = probs[0].argmax().item()
             if pred_index == index_label:
@@ -111,6 +122,7 @@ parser.add_argument('--wandb_project', type=str, default='zero-shot', help='Wand
 parser.add_argument('--dataset', type=str, default='birdsnap', help='Dataset name')
 parser.add_argument('--clip_model', type=str, default='hf-hub:laion/CLIP-ViT-L-14-laion2B-s32B-b82K', help='CLIP model name')
 parser.add_argument('--grayscale', type=bool, default=False, help='Grayscale images')
+parser.add_argument('--transform', type=str, default=None, help='Optional transform type (e.g., "grayscale")')
 
 args = parser.parse_args()
 
@@ -137,6 +149,16 @@ elif args.dataset == 'imagenet':
     json_contents = json.load(open("./imagenet_prompts.json"))
     transform_type = "grayscale" if args.grayscale else None
     ds, classes_to_index, index_to_classes, captions = process_imagenet(ds, json_contents, transform=transform_type)
+elif args.dataset == 'cifar100':
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+        ])
+        # ds = datasets.CIFAR100(root="./data", train=True, download=True, transform=transform)
+        ds = load_dataset("cifar100", split="train", trust_remote_code=True)
+        ds = ds.shuffle(seed=42)
+        ds = ds.select(range(1000))
+        json_contents = json.load(open("./cifar100_prompts.json"))
+        ds, classes_to_index, index_to_classes, captions = process_cifar100(ds, json_contents, transform=args.transform)
 
 class_labels = [index_to_classes[i] for i in range(len(index_to_classes))]
 
@@ -152,16 +174,17 @@ with torch.no_grad():
     cluster_ids = perform_clustering(label_embeddings.cpu().numpy(), n_clusters=5)
     label_groups = [f"cluster_{cid}" for cid in cluster_ids]
 
-# Compute average image features for each class
+# Step 1: Encode all images and collect image features grouped by class
 image_features_per_class = defaultdict(list)
 for sample in tqdm(ds, desc="Collecting image features per class"):
     image = preprocess_val(sample["image"]).unsqueeze(0).to(device)
     index_label = sample["index_label"]
     with torch.no_grad(), torch.cuda.amp.autocast():
         image_feature = model.encode_image(image)
-        image_feature /= image_feature.norm(dim=-1, keepdim=True)
+        image_feature /= image_feature.norm(dim=-1, keepdim=True)  # Normalize image embedding
         image_features_per_class[index_label].append(image_feature.squeeze(0).cpu())
 
+# Step 2: Compute average image embedding per class for visualization and similarity
 averaged_image_embeddings = []
 image_labels = []
 for idx in range(len(class_labels)):
@@ -175,20 +198,30 @@ for idx in range(len(class_labels)):
 
 image_embeddings = torch.stack(averaged_image_embeddings).numpy()
 
-# Replace t-SNE and PCA with image embeddings
-label_embeddings_2d = compute_pca(image_embeddings, image_labels, label_groups)
-label_embeddings_tsne = compute_tsne(image_embeddings, image_labels, label_groups)
+# Step 3: Generate few-shot prompts using 3 closest image embeddings (from any class)
+# Flatten all image features across classes into a single list
+all_image_features = []
+all_labels = []
+for class_idx, features in image_features_per_class.items():
+    for feat in features:
+        all_image_features.append(feat)
+        all_labels.append(class_labels[class_idx])
+all_image_features = torch.stack(all_image_features)
 
-# Construct few-shot prompts
 few_shot_captions = []
-for i, label in tqdm(enumerate(class_labels), desc="Generating few-shot prompts", total=len(class_labels)):
-    sims = cosine_similarity(label_embeddings[i:i+1].cpu(), label_embeddings.cpu())[0]
-    top_indices = sims.argsort()[-4:-1][::-1]  # 3 nearest neighbors
-    few_shot = [f"a photo of a {class_labels[j]}." for j in top_indices]
+for class_idx, label in tqdm(enumerate(class_labels), desc="Generating few-shot prompts", total=len(class_labels)):
+    if not image_features_per_class[class_idx]:
+        few_shot_captions.append(f"a photo of a {label}.")
+        continue
+
+    avg_feat = torch.stack(image_features_per_class[class_idx]).mean(dim=0)
+    sims = cosine_similarity(avg_feat.unsqueeze(0).numpy(), all_image_features.numpy())[0]
+    top_indices = sims.argsort()[-4:-1][::-1]  # Top 3 other examples
+    few_shot = [f"a photo of a {all_labels[j]}." for j in top_indices]
     few_shot.append(f"a photo of a {label}.")
     few_shot_captions.append(" ".join(few_shot))
 
-# Log a few class labels with their nearest neighbors
+# Log the 3 nearest label neighbors using text embedding similarity (for reference)
 for i in tqdm(range(min(5, len(class_labels))), desc="Logging nearest neighbors"):
     label = class_labels[i]
     sims = cosine_similarity(label_embeddings[i:i+1].cpu(), label_embeddings.cpu())[0]
@@ -213,6 +246,7 @@ else:
 
 ##==== WANDB CONFIGURATION END ====##
 
+# Step 4: Encode the few-shot text prompts to get final text features
 text = []
 for class_caption in few_shot_captions:
     text.append(tokenizer(class_caption).to(device=device))
@@ -233,6 +267,7 @@ with torch.no_grad(), torch.cuda.amp.autocast():
     wandb.log({"per_class_accuracy": per_class_accuracy})
     compute_per_cluster_accuracy(class_labels, cluster_ids, per_class_accuracy)
 
+    # Step 5: Evaluate each sample using image-to-text similarity with few-shot prompts
     for sample in tqdm(ds, desc="Evaluating samples"):
         image = sample["image"]
         label = sample["label"]
@@ -240,9 +275,9 @@ with torch.no_grad(), torch.cuda.amp.autocast():
         image = preprocess_val(image).unsqueeze(0).to(device=device)
         
         image_features = model.encode_image(image)
-        image_features /= image_features.norm(dim=-1, keepdim=True)
+        image_features /= image_features.norm(dim=-1, keepdim=True)  # Normalize image embedding
 
-        logits = (100.0 * image_features @ text_features.T)
+        logits = (100.0 * image_features @ text_features.T)  # Compute similarity scores
         text_probs = logits.softmax(dim=-1)
         max_prob, index = text_probs[0].max(dim=-1)
         # grab top 5
