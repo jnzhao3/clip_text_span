@@ -217,8 +217,11 @@ for class_idx, label in tqdm(enumerate(class_labels), desc="Generating few-shot 
     avg_feat = torch.stack(image_features_per_class[class_idx]).mean(dim=0)
     sims = cosine_similarity(avg_feat.unsqueeze(0).numpy(), all_image_features.numpy())[0]
     top_indices = sims.argsort()[-4:-1][::-1]  # Top 3 other examples
-    examples = "\n".join([f"Example {i+1}: a photo of a {all_labels[j]}." for i, j in enumerate(top_indices)])
-    prompt = f"{examples}\nWhat is this a photo of? A photo of a {label}."
+    examples = "\n".join([
+        f"Example {i+1}: This is a photo that looks like a {all_labels[j]}." 
+        for i, j in enumerate(top_indices)
+    ])
+    prompt = f"{examples}\nBased on visual similarity, this new image is likely a photo of a {label}."
     few_shot_captions.append(prompt)
 
 # Log the 3 nearest label neighbors using text embedding similarity (for reference)
