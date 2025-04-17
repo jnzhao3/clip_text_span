@@ -102,6 +102,33 @@ def compute_per_class_accuracy(ds, model, preprocess_fn, text_features, class_la
 
     return {label: class_correct[label] / class_counts[label] for label in class_labels if class_counts[label] > 0}
 
+def generate_hybrid_few_shot_features(class_labels, image_features_per_class, tokenizer, model, device, k=3, alpha=0.5):
+    """Generate few-shot class features using averaged hybrid (image + text) embeddings."""
+    few_shot_features = []
+    for class_idx, label in enumerate(class_labels):
+        if not image_features_per_class[class_idx]:
+            # fallback to pure text embedding
+            token = tokenizer(f"a photo of a {label}").to(device)
+            with torch.no_grad():
+                text_emb = model.encode_text(token)
+                text_emb = text_emb / text_emb.norm(dim=-1, keepdim=True)
+            few_shot_features.append(text_emb.mean(dim=0))
+            continue
+
+        support_images = image_features_per_class[class_idx][:k]
+        hybrid_embeds = []
+        text_tokens = tokenizer([f"a photo of a {label}"] * len(support_images)).to(device)
+        for j, image_feat in enumerate(support_images):
+            image_feat = image_feat.to(device)
+            with torch.no_grad():
+                text_emb = model.encode_text(text_tokens[j].unsqueeze(0)).squeeze(0)
+            hybrid = alpha * text_emb + (1 - alpha) * image_feat
+            hybrid_embeds.append(hybrid)
+        torch.cuda.empty_cache()
+        avg_hybrid = torch.stack(hybrid_embeds).mean(dim=0)
+        few_shot_features.append(avg_hybrid)
+    return torch.stack(few_shot_features)
+
 def compute_per_cluster_accuracy(class_labels, cluster_ids, per_class_accuracy):
     """Log average accuracy per semantic cluster."""
     from collections import defaultdict
@@ -123,11 +150,12 @@ parser.add_argument('--dataset', type=str, default='birdsnap', help='Dataset nam
 parser.add_argument('--clip_model', type=str, default='hf-hub:laion/CLIP-ViT-L-14-laion2B-s32B-b82K', help='CLIP model name')
 parser.add_argument('--grayscale', type=bool, default=False, help='Grayscale images')
 parser.add_argument('--transform', type=str, default=None, help='Optional transform type (e.g., "grayscale")')
+parser.add_argument('--gpu', type=int, default=0, help='GPU id to use (e.g., 0, 4, 6)')
 
 args = parser.parse_args()
 
 ##===== MODEL CONFIGURATION =====##
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device(f"cuda:{args.gpu}" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
 model, preprocess_train, preprocess_val = open_clip.create_model_and_transforms(args.clip_model)
@@ -156,7 +184,7 @@ elif args.dataset == 'cifar100':
         # ds = datasets.CIFAR100(root="./data", train=True, download=True, transform=transform)
         ds = load_dataset("cifar100", split="train", trust_remote_code=True)
         ds = ds.shuffle(seed=42)
-        ds = ds.select(range(1000))
+        ds = ds.select(range(300))  # reduced from 1000 to 300 to lower GPU memory load
         json_contents = json.load(open("./cifar100_prompts.json"))
         ds, classes_to_index, index_to_classes, captions = process_cifar100(ds, json_contents, transform=args.transform)
 
@@ -182,47 +210,27 @@ for sample in tqdm(ds, desc="Collecting image features per class"):
     with torch.no_grad(), torch.cuda.amp.autocast():
         image_feature = model.encode_image(image)
         image_feature /= image_feature.norm(dim=-1, keepdim=True)  # Normalize image embedding
-        image_features_per_class[index_label].append(image_feature.squeeze(0).cpu())
+        image_features_per_class[index_label].append(image_feature.squeeze(0).to(device))
 
 # Step 2: Compute average image embedding per class for visualization and similarity
 averaged_image_embeddings = []
 image_labels = []
 for idx in range(len(class_labels)):
     if image_features_per_class[idx]:
-        avg_feat = torch.stack(image_features_per_class[idx]).mean(dim=0)
+        avg_feat = torch.stack(image_features_per_class[idx]).mean(dim=0).to(device)
         averaged_image_embeddings.append(avg_feat)
         image_labels.append(index_to_classes[idx])
     else:
         averaged_image_embeddings.append(torch.zeros_like(label_embeddings[0]))
         image_labels.append(index_to_classes[idx])
 
-image_embeddings = torch.stack(averaged_image_embeddings).numpy()
+image_embeddings = torch.stack(averaged_image_embeddings).cpu().numpy()
 
-# Step 3: Generate few-shot prompts using 3 closest image embeddings (from any class)
-# Flatten all image features across classes into a single list
-all_image_features = []
-all_labels = []
-for class_idx, features in image_features_per_class.items():
-    for feat in features:
-        all_image_features.append(feat)
-        all_labels.append(class_labels[class_idx])
-all_image_features = torch.stack(all_image_features)
-
-few_shot_captions = []
-for class_idx, label in tqdm(enumerate(class_labels), desc="Generating few-shot prompts", total=len(class_labels)):
-    if not image_features_per_class[class_idx]:
-        few_shot_captions.append(f"a photo of a {label}.")
-        continue
-
-    avg_feat = torch.stack(image_features_per_class[class_idx]).mean(dim=0)
-    sims = cosine_similarity(avg_feat.unsqueeze(0).numpy(), all_image_features.numpy())[0]
-    top_indices = sims.argsort()[-4:-1][::-1]  # Top 3 other examples
-    examples = "\n".join([
-        f"Example {i+1}: This is a photo that looks like a {all_labels[j]}." 
-        for i, j in enumerate(top_indices)
-    ])
-    prompt = f"{examples}\nBased on visual similarity, this new image is likely a photo of a {label}."
-    few_shot_captions.append(prompt)
+# Step 3: Generate hybrid few-shot features
+few_shot_features = generate_hybrid_few_shot_features(
+    class_labels, image_features_per_class, tokenizer, model, device, k=3, alpha=0.5
+)
+text_features = few_shot_features / few_shot_features.norm(dim=-1, keepdim=True)
 
 # Log the 3 nearest label neighbors using text embedding similarity (for reference)
 for i in tqdm(range(min(5, len(class_labels))), desc="Logging nearest neighbors"):
@@ -238,6 +246,8 @@ for i in tqdm(range(min(5, len(class_labels))), desc="Logging nearest neighbors"
 
 ##==== END OF IMAGE PREPROCESSING ====##
 
+# Quantization: optionally add this before evaluation:
+
 ##==== WANDB CONFIGURATION ====##
 wandb.init(project=args.wandb_project, config=args)
 
@@ -249,69 +259,56 @@ else:
 
 ##==== WANDB CONFIGURATION END ====##
 
-# Step 4: Encode the few-shot text prompts to get final text features
-text = []
-for class_caption in few_shot_captions:
-    text.append(tokenizer(class_caption).to(device=device))
+# Step 4: Evaluate each sample using image-to-text similarity with few-shot prompts
+correct_counter = 0
+total_counter = 0
+loss = 0
 
-with torch.no_grad(), torch.cuda.amp.autocast():
-    correct_counter = 0
-    total_counter = 0
-    loss = 0
-    text_features = []
-    for t in tqdm(text, desc="Encoding few-shot text"):
-        t_avg = (model.encode_text(t).sum(dim=0) / len(t))
-        text_features.append(t_avg)
+batch_images = [preprocess_val(s["image"]) for s in ds]
+batch_images = torch.stack(batch_images).to(device=device)
 
-    text_features = torch.stack(text_features)
-    text_features /= text_features.norm(dim=-1, keepdim=True)
+with torch.no_grad():
+    for start in tqdm(range(0, len(ds), 16), desc="Evaluating samples in batches"):
+        end = min(start + 16, len(ds))
+        batch = ds[start:end]
+        batch = [dict(zip(batch.keys(), values)) for values in zip(*batch.values())]
+        images = torch.stack([preprocess_val(s["image"]) for s in batch]).to(device)
+        labels = torch.tensor([s["index_label"] for s in batch]).to(device)
 
-    per_class_accuracy = compute_per_class_accuracy(ds, model, preprocess_val, text_features, class_labels)
-    wandb.log({"per_class_accuracy": per_class_accuracy})
-    compute_per_cluster_accuracy(class_labels, cluster_ids, per_class_accuracy)
+        image_features = model.encode_image(images)
+        image_features /= image_features.norm(dim=-1, keepdim=True)
 
-    # Step 5: Evaluate each sample using image-to-text similarity with few-shot prompts
-    for sample in tqdm(ds, desc="Evaluating samples"):
-        image = sample["image"]
-        label = sample["label"]
-        index_label = sample["index_label"]
-        image = preprocess_val(image).unsqueeze(0).to(device=device)
-        
-        image_features = model.encode_image(image)
-        image_features /= image_features.norm(dim=-1, keepdim=True)  # Normalize image embedding
-
-        logits = (100.0 * image_features @ text_features.T)  # Compute similarity scores
+        logits = 100.0 * image_features @ text_features.T
         text_probs = logits.softmax(dim=-1)
-        max_prob, index = text_probs[0].max(dim=-1)
-        # grab top 5
-        k = min(5, text_probs.shape[-1])
-        top_five_probs, top_five_indices = text_probs[0].topk(k)
-        index = index.item()
-        is_correct = index == index_label
-        l = loss_fn(logits, torch.tensor([index_label]).to(device=device))
-        loss += l.item()
-        if is_correct:
-            correct_counter += 1
-        else:
-            print(f"Incorrectly Predicted: {index_to_classes[index]}, Actual: {label}, Probability: {max_prob.item():.4f}")
-            print(f"Top 5 Predictions: {[index_to_classes[i] for i in top_five_indices.tolist()]}")
-            wandb.log({
-                "misclassified_sample": {
-                    "predicted": index_to_classes[index],
-                    "actual": label,
-                    "top_5_predictions": [index_to_classes[i] for i in top_five_indices.tolist()],
-                    "probability": max_prob.item()
-                }
-            })
-        total_counter += 1
+        pred_indices = text_probs.argmax(dim=-1)
 
-    print(f"Accuracy: {correct_counter / total_counter * 100:.2f}%")
-    print(f"Total samples: {total_counter}, Correct predictions: {correct_counter}")
-    print(f"Average Loss: {loss / total_counter:.4f}")
+        for i, sample in enumerate(batch):
+            is_correct = pred_indices[i].item() == sample["index_label"]
+            if is_correct:
+                correct_counter += 1
+            else:
+                top_probs, top_ids = text_probs[i].topk(5)
+                print(f"Incorrectly Predicted: {index_to_classes[pred_indices[i].item()]}, Actual: {sample['label']}, Probability: {top_probs[0].item():.4f}")
+                print(f"Top 5 Predictions: {[index_to_classes[i.item()] for i in top_ids]}")
+                wandb.log({
+                    "misclassified_sample": {
+                        "predicted": index_to_classes[pred_indices[i].item()],
+                        "actual": sample['label'],
+                        "top_5_predictions": [index_to_classes[i.item()] for i in top_ids],
+                        "probability": top_probs[0].item()
+                    }
+                })
+            l = loss_fn(logits[i:i+1], labels[i:i+1])
+            loss += l.item()
+            total_counter += 1
 
-    wandb.log({
-        "accuracy": correct_counter / total_counter,
-        "total_samples": total_counter,
-        "correct_predictions": correct_counter,
-        "average_loss": loss / total_counter
-    })
+print(f"Accuracy: {correct_counter / total_counter * 100:.2f}%")
+print(f"Total samples: {total_counter}, Correct predictions: {correct_counter}")
+print(f"Average Loss: {loss / total_counter:.4f}")
+
+wandb.log({
+    "accuracy": correct_counter / total_counter,
+    "total_samples": total_counter,
+    "correct_predictions": correct_counter,
+    "average_loss": loss / total_counter
+})
