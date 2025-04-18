@@ -33,9 +33,13 @@ def get_args_parser():
     
     return parser
     
+    # Example usage for running on a checkpoint:
     # python compute_model_accuracy.py --model ViT-B-16 --pretrained laion2b_s34b_b88k --dataset cifar100 --data_path ~/../../../data/wong.justin/openalphaproof/output_dir --wandb_checkpoint_list jnzhao3/clip-cifar-finetuning/model-checkpoints:v12 --checkpoint_epoch_list checkpoint_epoch_4.pt --transform_list gray --device cuda
 
-def get_classifier(model, tokenizer, classes, checkpoint, epoch, device):
+    # Example usage for running on pretrained:
+    # python compute_model_accuracy.py --model ViT-B-16 --pretrained laion2b_s34b_b88k --dataset cifar100 --data_path ~/../../../data/wong.justin/openalphaproof/output_dir --device cuda
+    
+def get_classifier(model, tokenizer, classname, checkpoint, epoch, device):
     # Load the checkpoint file
     run = wandb.init()
     artifact = wandb.use_artifact(checkpoint, type='model')
@@ -47,7 +51,6 @@ def get_classifier(model, tokenizer, classes, checkpoint, epoch, device):
     model.to(device)
     model.eval()
     
-    classname = cifar100_classes
     classifier = zero_shot_classifier(model, tokenizer, classname, OPENAI_IMAGENET_TEMPLATES, device)
     return model, classifier
 
@@ -76,6 +79,8 @@ def main(args):
     
     model, _, preprocess = create_model_and_transforms(args.model, pretrained=args.pretrained)
     tokenizer = get_tokenizer(args.model)
+    model.to(args.device)
+    model.eval()
     
     gray = transforms.Compose([
         transforms.Grayscale(num_output_channels=3), 
@@ -94,18 +99,18 @@ def main(args):
         gray_data = CIFAR100(root=args.data_path, train=False, download=True, transform=gray)
         invert_data = CIFAR100(root=args.data_path, train=False, download=True, transform=invert)
         posterize_data = CIFAR100(root=args.data_path, train=False, download=True, transform=posterize)
+        data = {'gray': gray_data, 'invert': invert_data, 'posterize': posterize_data}
+        classname = cifar100_classes
+    
+    for transform in data.keys():
+        classifier = zero_shot_classifier(model, tokenizer, classname, OPENAI_IMAGENET_TEMPLATES, args.device)
+        pretrained_acc = checkpoint_acc(model, data[transform], classifier, args.device)
+        print(f"Pretrained accuracy for {args.model} on {transform} {args.dataset}: {pretrained_acc:.4f}")
     
     for wandb_checkpoint, checkpoint_epoch, transform in zip(args.wandb_checkpoint_list, args.checkpoint_epoch_list, args.transform_list):
-        checkpoint_model, classifier = get_classifier(model, tokenizer, cifar100_classes, wandb_checkpoint, checkpoint_epoch, args.device)
-        
-        if transform == 'gray':
-            dataset = gray_data
-        elif transform == 'invert':
-            dataset = invert_data
-        elif transform == 'posterize':
-            dataset = posterize_data
+        checkpoint_model, classifier = get_classifier(model, tokenizer, classname, wandb_checkpoint, checkpoint_epoch, args.device)
 
-        accuracy = checkpoint_acc(checkpoint_model, dataset, classifier, args.device)
+        accuracy = checkpoint_acc(checkpoint_model, data[transform], classifier, args.device)
         print(f"Accuracy for checkpoint {wandb_checkpoint}-{checkpoint_epoch} with transform {transform}: {accuracy:.4f}")
         
         
