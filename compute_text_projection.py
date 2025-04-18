@@ -18,6 +18,7 @@ from utils.openai_templates import OPENAI_IMAGENET_TEMPLATES
 from utils.imagenet_classes import imagenet_classes
 from utils.cifar100_classes import cifar100_classes
 from utils.cub_classes import cub_classes, waterbird_classes
+import wandb
 
 
 def get_args_parser():
@@ -32,6 +33,8 @@ def get_args_parser():
                         help='path where to save')
     parser.add_argument('--device', default='cuda:0',
                         help='device to use for testing')
+    parser.add_argument('--wandb_checkpoint', default=None, type=str)
+    parser.add_argument('--checkpoint_epoch', default=None, type=str)
     return parser
 
 
@@ -79,6 +82,20 @@ def main(args):
     """Calculates the classifier projection weights."""
     model, _, preprocess = create_model_and_transforms(args.model, pretrained=args.pretrained)
     tokenizer = get_tokenizer(args.model)
+    if args.wandb_checkpoint:
+        run = wandb.init()
+        artifact_name = args.wandb_checkpoint.split('/')[-1]
+        artifact_dir = f"artifacts/{artifact_name}"
+        if not os.path.exists(artifact_dir):
+            artifact = wandb.use_artifact(args.wandb_checkpoint, type='model')
+            artifact_dir = artifact.download()
+
+        # Load the checkpoint file
+        checkpoint = torch.load(f"{artifact_dir}/{args.checkpoint_epoch}")
+
+        # Load into model
+        model.load_state_dict(checkpoint['model_state_dict'])
+    
     model.to(args.device)
     model.eval()
     context_length = model.context_length
@@ -94,7 +111,8 @@ def main(args):
         'CIFAR100': cifar100_classes,
         'cub': cub_classes}[args.dataset]
     classifier = zero_shot_classifier(model, tokenizer, classes, OPENAI_IMAGENET_TEMPLATES, args.device)
-    with open(os.path.join(args.output_dir, f'{args.dataset}_classifier_{args.model}.npy'), 'wb') as f:
+    checkpoint_tag = f"_{args.wandb_checkpoint.split('/')[-1]}" if args.wandb_checkpoint else ""
+    with open(os.path.join(args.output_dir, f'{args.dataset}_classifier_{args.model}{checkpoint_tag}.npy'), 'wb') as f:
         np.save(f, classifier.detach().cpu().numpy())
     
 

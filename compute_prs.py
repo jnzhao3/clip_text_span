@@ -4,16 +4,15 @@ from PIL import Image
 import os.path
 import argparse
 from pathlib import Path
-
+import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import tqdm
 from utils.factory import create_model_and_transforms, get_tokenizer
 from utils.binary_waterbirds import BinaryWaterbirds
 from prs_hook import hook_prs_logger
 from torchvision.datasets import CIFAR100, CIFAR10, ImageNet, ImageFolder
-from datasets import load_dataset
-from torch.nn.parallel import DataParallel
 import torch.nn as nn
+import wandb
 
 
 def get_args_parser():
@@ -39,7 +38,10 @@ def get_args_parser():
     parser.add_argument(
         "--output_dir", default="./output_dir", help="path where to save"
     )
-    parser.add_argument("--device", default="cuda:0", help="device to use for testing")
+    parser.add_argument("--device", default="cuda", help="device to use for testing")
+    parser.add_argument("--grayscale", type=bool, default=False, help="use grayscale images for inference")
+    parser.add_argument("--wandb_checkpoint", default=None, help="wandb checkpoint to load")
+    parser.add_argument("--checkpoint_epoch", default=None, help="wandb project name")
     return parser
 
 
@@ -48,10 +50,27 @@ def main(args):
     model, _, preprocess = create_model_and_transforms(
         args.model, pretrained=args.pretrained
     )
+    if args.wandb_checkpoint:
+        run = wandb.init()
+        artifact = wandb.use_artifact(args.wandb_checkpoint, type='model')
+        artifact_dir = artifact.download()
+
+        # Load the checkpoint file
+        checkpoint = torch.load(f"{artifact_dir}/{args.checkpoint_epoch}")
+
+        # Load into model
+        model.load_state_dict(checkpoint['model_state_dict'])
+        
     model.to(args.device)
     model.eval()
     context_length = model.context_length
     vocab_size = model.vocab_size
+    
+    if args.grayscale:
+        preprocess = transforms.Compose([
+            transforms.Grayscale(num_output_channels=3), 
+            preprocess
+        ])
 
     print(
         "Model parameters:",
@@ -101,16 +120,18 @@ def main(args):
             cls_to_cls_results.append(
                 np.sum(attentions[:, :, 0], axis=2)
             )  # Store the cls->cls attention, reduce the heads
+    gray_tag = "_gray" if args.grayscale else ""
+    checkpoint_tag = f"_{args.wandb_checkpoint.split('/')[-1]}" if args.wandb_checkpoint else ""
     with open(
-        os.path.join(args.output_dir, f"{args.dataset}_attn_{args.model}.npy"), "wb"
+        os.path.join(args.output_dir, f"{args.dataset}{gray_tag}_attn_{args.model}{checkpoint_tag}.npy"), "wb"
     ) as f:
         np.save(f, np.concatenate(attention_results, axis=0))
     with open(
-        os.path.join(args.output_dir, f"{args.dataset}_mlp_{args.model}.npy"), "wb"
+        os.path.join(args.output_dir, f"{args.dataset}{gray_tag}_mlp_{args.model}{checkpoint_tag}.npy"), "wb"
     ) as f:
         np.save(f, np.concatenate(mlp_results, axis=0))
     with open(
-        os.path.join(args.output_dir, f"{args.dataset}_cls_attn_{args.model}.npy"), "wb"
+        os.path.join(args.output_dir, f"{args.dataset}{gray_tag}_cls_attn_{args.model}{checkpoint_tag}.npy"), "wb"
     ) as f:
         np.save(f, np.concatenate(cls_to_cls_results, axis=0))
 

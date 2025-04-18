@@ -1,0 +1,43 @@
+[34m[1mwandb[0m: Downloading large artifact model-checkpoints:v12, 1228.59MB. 1 files...
+[34m[1mwandb[0m:   1 of 1 files downloaded.
+Done. 0:1:4.1
+Traceback (most recent call last):
+  File "compute_weight_diff_per_head.py", line 73, in <module>
+    main(args)
+  File "compute_weight_diff_per_head.py", line 35, in main
+    checkpoint = torch.load(f"{artifact_dir}/{args.checkpoint_epoch}")
+  File "/Users/ericyuan/miniconda3/envs/cs182/lib/python3.8/site-packages/torch/serialization.py", line 1025, in load
+    return _load(opened_zipfile,
+  File "/Users/ericyuan/miniconda3/envs/cs182/lib/python3.8/site-packages/torch/serialization.py", line 1446, in _load
+    result = unpickler.load()
+  File "/Users/ericyuan/miniconda3/envs/cs182/lib/python3.8/site-packages/torch/serialization.py", line 1416, in persistent_load
+    typed_storage = load_tensor(dtype, nbytes, key, _maybe_decode_ascii(location))
+  File "/Users/ericyuan/miniconda3/envs/cs182/lib/python3.8/site-packages/torch/serialization.py", line 1390, in load_tensor
+    wrap_storage=restore_location(storage, location),
+  File "/Users/ericyuan/miniconda3/envs/cs182/lib/python3.8/site-packages/torch/serialization.py", line 390, in default_restore_location
+    result = fn(storage, location)
+  File "/Users/ericyuan/miniconda3/envs/cs182/lib/python3.8/site-packages/torch/serialization.py", line 265, in _cuda_deserialize
+    device = validate_cuda_device(location)
+  File "/Users/ericyuan/miniconda3/envs/cs182/lib/python3.8/site-packages/torch/serialization.py", line 249, in validate_cuda_device
+    raise RuntimeError('Attempting to deserialize object on a CUDA '
+RuntimeError: Attempting to deserialize object on a CUDA device but torch.cuda.is_available() is False. If you are running on a CPU-only machine, please use torch.load with map_location=torch.device('cpu') to map your storages to the CPU.
+Traceback (most recent call last):
+  File "compute_weight_diff_per_head.py", line 73, in <module>
+    main(args)
+  File "compute_weight_diff_per_head.py", line 35, in main
+    checkpoint = torch.load(f"{artifact_dir}/{args.checkpoint_epoch}")
+  File "/Users/ericyuan/miniconda3/envs/cs182/lib/python3.8/site-packages/torch/serialization.py", line 1025, in load
+    return _load(opened_zipfile,
+  File "/Users/ericyuan/miniconda3/envs/cs182/lib/python3.8/site-packages/torch/serialization.py", line 1446, in _load
+    result = unpickler.load()
+  File "/Users/ericyuan/miniconda3/envs/cs182/lib/python3.8/site-packages/torch/serialization.py", line 1416, in persistent_load
+    typed_storage = load_tensor(dtype, nbytes, key, _maybe_decode_ascii(location))
+  File "/Users/ericyuan/miniconda3/envs/cs182/lib/python3.8/site-packages/torch/serialization.py", line 1390, in load_tensor
+    wrap_storage=restore_location(storage, location),
+  File "/Users/ericyuan/miniconda3/envs/cs182/lib/python3.8/site-packages/torch/serialization.py", line 390, in default_restore_location
+    result = fn(storage, location)
+  File "/Users/ericyuan/miniconda3/envs/cs182/lib/python3.8/site-packages/torch/serialization.py", line 265, in _cuda_deserialize
+    device = validate_cuda_device(location)
+  File "/Users/ericyuan/miniconda3/envs/cs182/lib/python3.8/site-packages/torch/serialization.py", line 249, in validate_cuda_device
+    raise RuntimeError('Attempting to deserialize object on a CUDA '
+RuntimeError: Attempting to deserialize object on a CUDA device but torch.cuda.is_available() is False. If you are running on a CPU-only machine, please use torch.load with map_location=torch.device('cpu') to map your storages to the CPU.

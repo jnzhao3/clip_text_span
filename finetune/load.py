@@ -5,11 +5,11 @@ import open_clip
 run = wandb.init()
 
 # Load the artifact
-artifact = wandb.use_artifact('jnzhao3/clip-finetuning/model-checkpoints:v10', type='model')
+artifact = wandb.use_artifact('jnzhao3/clip-finetuning/model-checkpoints:v12', type='model')
 artifact_dir = artifact.download()
 
 # Load the checkpoint file
-checkpoint = torch.load(f"{artifact_dir}/checkpoint_epoch_4.pt")
+checkpoint = torch.load(f"{artifact_dir}/checkpoint_epoch_5.pt")
 
 # Load into model
 

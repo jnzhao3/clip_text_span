@@ -1,7 +1,7 @@
 import argparse
 import torch
 import wandb
-from utils.factory import create_model_and_transforms, get_tokenizer
+from utils.factory import create_model_and_transforms
 
 def get_args_parser():
     parser = argparse.ArgumentParser("Weight Difference", add_help=False)
@@ -21,7 +21,7 @@ def get_args_parser():
     )
     parser.add_argument("--wandb_checkpoint", default=None, help="wandb checkpoint to load")
     parser.add_argument("--checkpoint_epoch", default=None, help="wandb project name")
-    
+    parser.add_argument("--all_layers", type=bool, default=False, help="use all layers for analysis")
     return parser
     
 def main(args):
@@ -37,7 +37,7 @@ def main(args):
     
     if "ViT-B-16" in args.model:
         attn_weight_size = 768
-        layers_we_care = [8, 9, 10, 11]
+        layers_we_care = [8, 9, 10, 11] if not args.all_layers else list(range(12))
         heads_per_layer = range(12)
         single_head_input_size = 64
     

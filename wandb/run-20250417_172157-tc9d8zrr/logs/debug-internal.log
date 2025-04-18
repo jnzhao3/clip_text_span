@@ -1,0 +1,16 @@
+{"time":"2025-04-17T17:21:57.493959-07:00","level":"INFO","msg":"stream: starting","core version":"0.19.8","symlink path":"/Users/ericyuan/Desktop/Berkeley/Research/clip_text_span/wandb/run-20250417_172157-tc9d8zrr/logs/debug-core.log"}
+{"time":"2025-04-17T17:21:57.707597-07:00","level":"INFO","msg":"created new stream","id":"tc9d8zrr"}
+{"time":"2025-04-17T17:21:57.707659-07:00","level":"INFO","msg":"stream: started","id":"tc9d8zrr"}
+{"time":"2025-04-17T17:21:57.707722-07:00","level":"INFO","msg":"handler: started","stream_id":"tc9d8zrr"}
+{"time":"2025-04-17T17:21:57.707766-07:00","level":"INFO","msg":"writer: Do: started","stream_id":"tc9d8zrr"}
+{"time":"2025-04-17T17:21:57.707893-07:00","level":"INFO","msg":"sender: started","stream_id":"tc9d8zrr"}
+{"time":"2025-04-17T17:21:58.16442-07:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-04-17T17:21:58.981291-07:00","level":"WARN","msg":"sender: sendUseArtifact: job builder disabled, skipping"}
+{"time":"2025-04-17T17:23:03.456244-07:00","level":"INFO","msg":"stream: closing","id":"tc9d8zrr"}
+{"time":"2025-04-17T17:23:03.456789-07:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2025-04-17T17:23:03.458145-07:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2025-04-17T17:23:03.899526-07:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-04-17T17:23:04.054153-07:00","level":"INFO","msg":"writer: Close: closed","stream_id":"tc9d8zrr"}
+{"time":"2025-04-17T17:23:04.054464-07:00","level":"INFO","msg":"handler: closed","stream_id":"tc9d8zrr"}
+{"time":"2025-04-17T17:23:04.054526-07:00","level":"INFO","msg":"sender: closed","stream_id":"tc9d8zrr"}
+{"time":"2025-04-17T17:23:04.05518-07:00","level":"INFO","msg":"stream: closed","id":"tc9d8zrr"}

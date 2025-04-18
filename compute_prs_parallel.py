@@ -14,6 +14,8 @@ from prs_hook import hook_prs_logger
 from torchvision.datasets import CIFAR100, CIFAR10, ImageNet, ImageFolder
 import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel as DDP
+import wandb
+import torchvision.transforms as transforms
 
 
 # parallel script to leverage multiple gpus (8)
@@ -41,7 +43,10 @@ def get_args_parser():
     parser.add_argument(
         "--output_dir", default="./output_dir", help="path where to save"
     )
-    parser.add_argument("--device", default="cuda:0", help="device to use for testing")
+    parser.add_argument("--device", default="cuda", help="device to use for testing")
+    parser.add_argument("--grayscale", type=bool, default=False, help="use grayscale images for inference")
+    parser.add_argument("--wandb_checkpoint", default=None, help="wandb checkpoint to load")
+    parser.add_argument("--checkpoint_epoch", default=None, help="wandb project name")
     return parser
 
 
@@ -54,6 +59,17 @@ def main(args):
     model, _, preprocess = create_model_and_transforms(
         args.model, pretrained=args.pretrained
     )
+    if args.wandb_checkpoint:
+        run = wandb.init()
+        artifact = wandb.use_artifact(args.wandb_checkpoint, type='model')
+        artifact_dir = artifact.download()
+
+        # Load the checkpoint file
+        checkpoint = torch.load(f"{artifact_dir}/{args.checkpoint_epoch}")
+
+        # Load into model
+        model.load_state_dict(checkpoint['model_state_dict'])
+      
     prs = hook_prs_logger(model, f"cuda:{local_rank}")
     model = model.to(local_rank)
     model = DDP(model, device_ids=[local_rank])
@@ -71,6 +87,13 @@ def main(args):
     print("Len of res:", len(base_model.visual.transformer.resblocks))
 
     # Data:
+    
+    if args.grayscale:
+        preprocess = transforms.Compose([
+        transforms.Grayscale(num_output_channels=3), 
+        preprocess
+    ])
+
     if args.dataset == "imagenet":
         ds = ImageNet(root=args.data_path, split="val", transform=preprocess)
     elif args.dataset == "binary_waterbirds":
@@ -109,16 +132,18 @@ def main(args):
             cls_to_cls_results.append(
                 np.sum(attentions[:, :, 0], axis=2)
             )  # Store the cls->cls attention, reduce the heads
+    gray_tag = "_gray" if args.grayscale else ""
+    checkpoint_tag = f"_{args.wandb_checkpoint.split('/')[-1]}" if args.wandb_checkpoint else ""
     with open(
-        os.path.join(args.output_dir, f"{args.dataset}_attn_{args.model}.npy"), "wb"
+        os.path.join(args.output_dir, f"{args.dataset}{gray_tag}_attn_{args.model}{checkpoint_tag}.npy"), "wb"
     ) as f:
         np.save(f, np.concatenate(attention_results, axis=0))
     with open(
-        os.path.join(args.output_dir, f"{args.dataset}_mlp_{args.model}.npy"), "wb"
+        os.path.join(args.output_dir, f"{args.dataset}{gray_tag}_mlp_{args.model}{checkpoint_tag}.npy"), "wb"
     ) as f:
         np.save(f, np.concatenate(mlp_results, axis=0))
     with open(
-        os.path.join(args.output_dir, f"{args.dataset}_cls_attn_{args.model}.npy"), "wb"
+        os.path.join(args.output_dir, f"{args.dataset}{gray_tag}_cls_attn_{args.model}{checkpoint_tag}.npy"), "wb"
     ) as f:
         np.save(f, np.concatenate(cls_to_cls_results, axis=0))
 

@@ -110,6 +110,9 @@ def get_args_parser():
 
 
 def main(args):
+    
+    original_dataset = args.dataset.split("_")[0] if "gray" in args.dataset else args.dataset
+    
     with open(
         os.path.join(args.input_dir, f"{args.dataset}_attn_{args.model}.npy"), "rb"
     ) as f:
@@ -119,7 +122,7 @@ def main(args):
     ) as f:
         mlps = np.load(f)  # [b, l+1, d]
     with open(
-        os.path.join(args.input_dir, f"{args.dataset}_classifier_{args.model}.npy"),
+        os.path.join(args.input_dir, f"{original_dataset}_classifier_{args.model}.npy"),
         "rb",
     ) as f:
         classifier = np.load(f)

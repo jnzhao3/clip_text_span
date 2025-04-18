@@ -1,0 +1,17 @@
+/home/eecs/shuoyuan/proj/clip_text_span
+ace
+Wed Apr 16 18:53:11 PDT 2025
+starting job...
+The token has not been saved to the git credentials helper. Pass `add_to_git_credential=True` in this function directly or `--add-to-git-credential` if using via `huggingface-cli` if you want to set the git credential as well.
+Token is valid (permission: fineGrained).
+The token `imagenet` has been saved to /home/eecs/shuoyuan/../../../data/wong.justin/openalphaproof/.cache/huggingface/stored_tokens
+Your token has been saved to /home/eecs/shuoyuan/../../../data/wong.justin/openalphaproof/.cache/huggingface/token
+Login successful.
+Note: Environment variable`HF_TOKEN` is set and is the current active token independently from the token you've just configured.
+/home/eecs/shuoyuan/miniconda3/envs/prsclip/lib/python3.12/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+Baseline: [0.6196]
+color heads mean ablated: [0.6158]
+color heads zero ablated: [0.6167]
+first few attention layers + color heads mean ablated: [0.5818]
+globally mean ablated: [0.5867]
