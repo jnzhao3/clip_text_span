@@ -15,7 +15,7 @@ from torch import nn
 parser = argparse.ArgumentParser()
 parser.add_argument('--wandb_project', type=str, default='zero-shot', help='WandB project name')
 parser.add_argument('--dataset', type=str, default='birdsnap', help='Dataset name')
-parser.add_argument('--clip_model', type=str, default='hf-hub:laion/CLIP-ViT-L-14-laion2B-s32B-b82K', help='CLIP model name')
+parser.add_argument('--clip_model', type=str, default='hf-hub:laion/CLIP-ViT-B-16-laion2B-s34B-b88K', help='CLIP model name')
 parser.add_argument('--transform', type=str, default=None, help='Grayscale images')
 
 args = parser.parse_args()
@@ -50,18 +50,14 @@ elif args.dataset == 'cifar100':
         ds = ds.shuffle(seed=42)
         ds = ds.select(range(1000))
         json_contents = json.load(open("./cifar100_prompts.json"))
-        ds, classes_to_index, index_to_classes, captions = process_cifar100(ds, json_contents, transform=args.transform)
-
-# if args.grayscale:
-#     print("Converting images to grayscale")
-#     ds = ds.map(lambda x: {"image": x["image"].convert("L")})
+        ds, classes_to_index, index_to_classes, captions = process_cifar100(ds, json_contents, preprocess_val, transform=args.transform)
 
 ##==== END OF IMAGE PREPROCESSING ====##
 
 ##==== WANDB CONFIGURATION ====##
 wandb.init(project=args.wandb_project, config=args)
 
-images = [wandb.Image(ds[i]["image"], caption=f"Label: {ds[i]['label']}") for i in range(5)]
+images = [wandb.Image(ds[i]["image"], caption=f"Label: {index_to_classes[ds[i]['index_label']]}") for i in range(5)]
 wandb.log({"images": images})
 
 ##==== WANDB CONFIGURATION END ====##
@@ -84,9 +80,8 @@ with torch.no_grad(), torch.cuda.amp.autocast():
 
     for sample in ds:
         image = sample["image"]
-        label = sample["label"]
         index_label = sample["index_label"]
-        image = preprocess_val(image).unsqueeze(0).to(device=device)
+        image = image.unsqueeze(0).to(device=device)
         
         image_features = model.encode_image(image)
         image_features /= image_features.norm(dim=-1, keepdim=True)
@@ -103,7 +98,7 @@ with torch.no_grad(), torch.cuda.amp.autocast():
         if is_correct:
             correct_counter += 1
         else:
-            print(f"Incorrectly Predicted: {index_to_classes[index]}, Actual: {label}, Probability: {max_prob.item():.4f}")
+            print(f"Incorrectly Predicted: {index_to_classes[index]}, Actual: {index_to_classes[index_label]}, Probability: {max_prob.item():.4f}")
             print(f"Top 5 Predictions: {[index_to_classes[i] for i in top_five_indices.tolist()]}")
         total_counter += 1
 
