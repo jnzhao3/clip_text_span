@@ -14,6 +14,7 @@ from data import process_birds, process_imagenet, process_cifar100
 from tqdm import tqdm
 from torch.amp import autocast, GradScaler
 import tempfile
+import os
 ##==== END OF IMPORTS ====##
 
 ##==== CONFIGURATION ====##
@@ -21,22 +22,23 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--wandb_project', type=str, default='clip-finetuning', help='WandB project name')
 parser.add_argument('--run_name', type=str, default='', help='WandB run name')
 parser.add_argument('--dataset', type=str, default='birdsnap', help='Dataset name')
-parser.add_argument('--clip_model', type=str, default='hf-hub:laion/CLIP-ViT-L-14-laion2B-s32B-b82K', help='CLIP model name')
+parser.add_argument('--clip_model', type=str, default='hf-hub:laion/CLIP-ViT-B-16-laion2B-s34B-b88K', help='CLIP model name')
 parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
 parser.add_argument('--epochs', type=int, default=20, help='Number of epochs')
 parser.add_argument('--model_save_interval', type=int, default=5, help='Model save interval')
 parser.add_argument('--eval_interval', type=int, default=2, help='Training evaluation interval')
 parser.add_argument('--transform', type=str, default=None, help='Grayscale images')
+parser.add_argument('--unfrozen_layers', type=int, nargs='+', default=[], help='Unfrozen layers')
 ##===== END OF CONFIGURATION ====##
 
 ##===== FINETUNING SCRIPT =====##
 class Finetuner():
 
-    def __init__(self, model, tokenizer, preprocess_train, preprocess_val, dataset, classes_to_index, index_to_classes, captions, epochs, batch_size, wandb_project, wandb_run_name, model_save_interval, eval_interval):
+    def __init__(self, model, tokenizer, dataset, classes_to_index, index_to_classes, captions, epochs, batch_size, wandb_project, wandb_run_name, model_save_interval, eval_interval):
         self.model = model
         self.tokenizer = tokenizer
-        self.preprocess_train = preprocess_train
-        self.preprocess_val = preprocess_val
+        # self.preprocess_train = preprocess_train
+        # self.preprocess_val = preprocess_val
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
@@ -51,20 +53,32 @@ class Finetuner():
         else:
             wandb.init(project=wandb_project, config=args)
 
-        images = [wandb.Image(dataset[i]["image"], caption=f"Label: {dataset[i]['label']}") for i in range(5)]
-        wandb.log({"train_images": images})
+        # import ipdb; ipdb.set_trace()
+        # images = [wandb.Image(dataset[i]["image"], caption=f"Label: {index_to_classes[dataset[0]['index_label']]}") for i in range(1)]
+        # wandb.log({"train_images": images})
 
-        dataset = dataset.map(lambda x : {"image" : self.preprocess_train(x["image"])})
-        dataset.set_format(type="torch")
+        # Outside the class
+        # def apply_preprocess_train(example, preprocess_fn):
+        #     return {"image": preprocess_fn(example["image"])}
+        
+        # from functools import partial
+
+        # dataset = dataset.map(
+        #     partial(apply_preprocess_train, preprocess_fn=self.preprocess_train),
+        #     num_proc=4
+        # )
+
+        # dataset = dataset.map(lambda x : {"image" : self.preprocess_train(x["image"])}, num_proc=os.cpu_count())
+        # dataset.set_format(type="torch", )
         train_size = int(0.8 * len(dataset))
         val_size = len(dataset) - train_size
 
         # Random split
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
-
+        print("creating dataloaders...")
         self.train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        self.val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+        self.val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
         text = []
         for class_caption in captions:
@@ -91,14 +105,13 @@ class Finetuner():
             loss_avg = 0
             counter = 0
             for sample in tqdm(self.train_loader):
-                images = sample["image"].to(self.device, non_blocking=True)
-                index_labels = sample["index_label"].to(self.device, non_blocking=True)
+                images = sample["image"].to(self.device, dtype=torch.float16, non_blocking=True)
+                index_labels = sample["index_label"].to(self.device, dtype=torch.long, non_blocking=True)
                 self.optimizer.zero_grad()
                 with autocast(device_type=self.device.type):
                     images_features = model.encode_image(images)
                     images_features_normalized = images_features / images_features.norm(dim=-1, keepdim=True)                    
                     logits = (100.0 * images_features_normalized @ self.text_features.T)
-                
                     loss = loss_fn(logits, index_labels)
 
                     scaler.scale(loss).backward()
@@ -116,39 +129,26 @@ class Finetuner():
             if epoch % self.eval_interval == 0:
                 self.model.eval()
                 with torch.no_grad():
-                    val_loss = 0
+                    val_acc = 0
                     val_counter = 0
                     for sample in tqdm(self.val_loader):
-                        images = sample["image"].to(self.device, non_blocking=True)
-                        index_labels = sample["index_label"].to(self.device, non_blocking=True)
+                        images = sample["image"].to(self.device, dtype=torch.float16, non_blocking=True)
+                        index_labels = sample["index_label"].to(self.device, dtype=torch.float16, non_blocking=True)
                         with autocast(device_type=self.device.type):
                             images_features = model.encode_image(images)
                             images_features_normalized = images_features / images_features.norm(dim=-1, keepdim=True)                    
                             logits = (100.0 * images_features_normalized @ self.text_features.T)
+                            prediced_index_label = logits.argmax(dim=-1)
+                            corrected_predictions = prediced_index_label == index_labels
+                        val_acc += corrected_predictions.sum().item()
                         
-                            loss = loss_fn(logits, index_labels)
+                            # loss = loss_fn(logits, index_labels)
 
-                        val_loss += loss.detach().cpu().numpy().item()
-                        val_counter += 1
-                    val_loss = val_loss / val_counter
-                    wandb.log({"epoch": epoch, "val_loss": val_loss})
-                    print(f"Validation loss: {val_loss}")
-
-    # def save_checkpoint(self, epoch):
-    #     '''
-    #     Saves the model checkpoint.
-    #     '''
-    #     checkpoint_path = f"checkpoint_epoch_{epoch}.pt"
-    #     torch.save({
-    #         'epoch': epoch,
-    #         'model_state_dict': self.model.state_dict(),
-    #         'optimizer_state_dict': self.optimizer.state_dict()
-    #     }, checkpoint_path)
-
-    #     # Log checkpoint to wandb
-    #     artifact = wandb.Artifact('model-checkpoints', type='model')
-    #     artifact.add_file(checkpoint_path)
-    #     wandb.log_artifact(artifact)
+                        # val_acc += loss.detach().cpu().numpy().item()
+                        val_counter += len(corrected_predictions)
+                    val_acc = val_acc / val_counter
+                    wandb.log({"epoch": epoch, "val_acc": val_acc})
+                    print(f"Validation accuracy: {val_acc}")
 
     def save_checkpoint(self, epoch):
         '''
@@ -168,17 +168,33 @@ class Finetuner():
             wandb.log_artifact(artifact)
 
 if __name__ == "__main__":
+    print("Using GPU: ", torch.cuda.is_available())
     # Parse arguments
     args = parser.parse_args()
     model, preprocess_train, preprocess_val = open_clip.create_model_and_transforms(args.clip_model)
     tokenizer = open_clip.get_tokenizer(args.clip_model)
 
+    if len(args.unfrozen_layers) > 0: # if unfrozen layers are not specified, finetune all layers
+        print("Unfreezing layers: ", args.unfrozen_layers)
+        for param in model.parameters():
+            param.requires_grad = False
+        
+        for name, param in model.named_parameters():
+            name_tokens = name.split('.')
+            if name_tokens[0] == "visual" and name_tokens[1] == "transformer":
+                num = int(name_tokens[3])
+                if num in args.unfrozen_layers:
+                    param.requires_grad = True
+            elif name_tokens[0] == "transformer":
+                num = int(name_tokens[2])
+                if num in args.unfrozen_layers:
+                    param.requires_grad = True
+
     if args.dataset == 'imagenet':
         ds = load_dataset("imagenet-1k", split="train", trust_remote_code=True).shuffle(seed=42) # TODO: change to full dataset if necessary. Or shuffle being grabbing only 1000.
-        # ds = ds.shuffle(seed=42)
         ds = ds.select(range(130000))
         json_contents = json.load(open("./imagenet_prompts.json"))
-        ds, classes_to_index, index_to_classes, captions = process_imagenet(ds, json_contents, transform=args.transform)
+        ds, classes_to_index, index_to_classes, captions = process_imagenet(ds, json_contents, preprocess_train, transform=args.transform)
     elif args.dataset == 'cifar100':
         transform = transforms.Compose([
             transforms.ToTensor(),
@@ -187,13 +203,13 @@ if __name__ == "__main__":
         ds = load_dataset("cifar100", split="train", trust_remote_code=True)
         ds = ds.shuffle(seed=42)
         json_contents = json.load(open("./cifar100_prompts.json"))
-        ds, classes_to_index, index_to_classes, captions = process_cifar100(ds, json_contents, transform=args.transform)
+        ds, classes_to_index, index_to_classes, captions = process_cifar100(ds, json_contents, preprocess_train, transform=args.transform)
 
     finetuner = Finetuner(
         model=model,
         tokenizer=tokenizer,
-        preprocess_train=preprocess_train,
-        preprocess_val=preprocess_val,
+        # preprocess_train=preprocess_train,
+        # preprocess_val=preprocess_val,
         dataset=ds,
         classes_to_index=classes_to_index,
         index_to_classes=index_to_classes,
