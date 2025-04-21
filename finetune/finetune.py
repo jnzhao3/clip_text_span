@@ -29,6 +29,8 @@ parser.add_argument('--model_save_interval', type=int, default=5, help='Model sa
 parser.add_argument('--eval_interval', type=int, default=2, help='Training evaluation interval')
 parser.add_argument('--transform', type=str, default=None, help='Grayscale images')
 parser.add_argument('--unfrozen_layers', type=int, nargs='+', default=[], help='Unfrozen layers')
+parser.add_argument('--semantic_shift', type=str, default='', help='Semantic shift to apply')
+parser.add_argument('--semantic_shuffle', type=bool, default=False, help='Shuffle classes')
 ##===== END OF CONFIGURATION ====##
 
 ##===== FINETUNING SCRIPT =====##
@@ -53,23 +55,6 @@ class Finetuner():
         else:
             wandb.init(project=wandb_project, config=args)
 
-        # import ipdb; ipdb.set_trace()
-        # images = [wandb.Image(dataset[i]["image"], caption=f"Label: {index_to_classes[dataset[0]['index_label']]}") for i in range(1)]
-        # wandb.log({"train_images": images})
-
-        # Outside the class
-        # def apply_preprocess_train(example, preprocess_fn):
-        #     return {"image": preprocess_fn(example["image"])}
-        
-        # from functools import partial
-
-        # dataset = dataset.map(
-        #     partial(apply_preprocess_train, preprocess_fn=self.preprocess_train),
-        #     num_proc=4
-        # )
-
-        # dataset = dataset.map(lambda x : {"image" : self.preprocess_train(x["image"])}, num_proc=os.cpu_count())
-        # dataset.set_format(type="torch", )
         train_size = int(0.8 * len(dataset))
         val_size = len(dataset) - train_size
 
@@ -203,7 +188,7 @@ if __name__ == "__main__":
         ds = load_dataset("cifar100", split="train", trust_remote_code=True)
         ds = ds.shuffle(seed=42)
         json_contents = json.load(open("./cifar100_prompts.json"))
-        ds, classes_to_index, index_to_classes, captions = process_cifar100(ds, json_contents, preprocess_train, transform=args.transform)
+        ds, classes_to_index, index_to_classes, captions = process_cifar100(ds, json_contents, preprocess_train, transform=args.transform, semantic_shift=args.semantic_shift, semantic_shuffle=args.semantic_shuffle)
 
     finetuner = Finetuner(
         model=model,

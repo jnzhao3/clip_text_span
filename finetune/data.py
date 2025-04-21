@@ -2,6 +2,7 @@ import torch
 from torchvision import transforms
 from datasets import Dataset, Image
 import json
+import numpy as np
 from PIL import ImageOps
 ##==== END OF IMPORTS ====##
 
@@ -41,7 +42,7 @@ def preprocess_fn(x, preprocess):
     x["image"] = new_images
     return x
 
-def process_cifar100(dataset, json, preprocess, transform=None):
+def process_cifar100(dataset, json, preprocess, transform=None, semantic_shift='', semantic_shuffle=False):
     '''
     {
     'img': PIL.Image.Image,
@@ -49,6 +50,9 @@ def process_cifar100(dataset, json, preprocess, transform=None):
     'coarse_label': 5
     }'''
     classes = json["classes"]
+    if semantic_shuffle:
+        np.random.seed(1)
+        np.random.shuffle(classes)
     classes_to_index = {classes[i]: i for i in range(len(classes))}
     index_to_classes = {i: classes[i] for i in range(len(classes))}
 
@@ -72,7 +76,7 @@ def process_cifar100(dataset, json, preprocess, transform=None):
     for i in range(len(classes)):
         t = []
         for j in range(len(templates)):
-            t.append(templates[j][0] + classes[i] + templates[j][1])
+            t.append(templates[j][0] + classes[i] + semantic_shift + templates[j][1])
         captions.append(t)
     
     return dataset, classes_to_index, index_to_classes, captions
