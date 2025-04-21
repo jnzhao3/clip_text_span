@@ -17,6 +17,8 @@ parser.add_argument('--wandb_project', type=str, default='zero-shot', help='Wand
 parser.add_argument('--dataset', type=str, default='birdsnap', help='Dataset name')
 parser.add_argument('--clip_model', type=str, default='hf-hub:laion/CLIP-ViT-B-16-laion2B-s34B-b88K', help='CLIP model name')
 parser.add_argument('--transform', type=str, default=None, help='Grayscale images')
+parser.add_argument('--semantic_shift', type=str, default='', help='Semantic shift to apply')
+parser.add_argument('--semantic_shuffle', type=bool, default=False, help='Shuffle classes')
 
 args = parser.parse_args()
 
@@ -50,7 +52,7 @@ elif args.dataset == 'cifar100':
         ds = ds.shuffle(seed=42)
         ds = ds.select(range(1000))
         json_contents = json.load(open("./cifar100_prompts.json"))
-        ds, classes_to_index, index_to_classes, captions = process_cifar100(ds, json_contents, preprocess_val, transform=args.transform)
+        ds, classes_to_index, index_to_classes, captions = process_cifar100(ds, json_contents, preprocess_val, transform=args.transform, semantic_shift=args.semantic_shift, semantic_shuffle=args.semantic_shuffle)
 
 ##==== END OF IMAGE PREPROCESSING ====##
 

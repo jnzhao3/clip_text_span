@@ -8,3 +8,5 @@ artifacts
 *.pt
 *.sh
 data
+wandb
+finetune/wandb/
