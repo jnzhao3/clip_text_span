@@ -15,6 +15,7 @@ from tqdm import tqdm
 from torch.amp import autocast, GradScaler
 import tempfile
 import os
+from modules import ScaledMultiheadAttention, wrap_multihead_attention
 ##==== END OF IMPORTS ====##
 
 ##==== CONFIGURATION ====##
@@ -31,6 +32,7 @@ parser.add_argument('--transform', type=str, default=None, help='Grayscale image
 parser.add_argument('--unfrozen_layers', type=int, nargs='+', default=[], help='Unfrozen layers')
 parser.add_argument('--semantic_shift', type=str, default='', help='Semantic shift to apply')
 parser.add_argument('--semantic_shuffle', type=bool, default=False, help='Shuffle classes')
+parser.add_argument('--scaled_attention_only', type=bool, default=False, help='Use scaled attention only')
 ##===== END OF CONFIGURATION ====##
 
 ##===== FINETUNING SCRIPT =====##
@@ -60,6 +62,10 @@ class Finetuner():
 
         # Random split
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+
+        # upload an image to wandb
+        images = [wandb.Image(train_dataset[i]["image"], caption=f"Label: {index_to_classes[train_dataset[i]['index_label']]}") for i in range(1)]
+        wandb.log({"examples": images})
 
         print("creating dataloaders...")
         self.train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -159,7 +165,7 @@ if __name__ == "__main__":
     model, preprocess_train, preprocess_val = open_clip.create_model_and_transforms(args.clip_model)
     tokenizer = open_clip.get_tokenizer(args.clip_model)
 
-    if len(args.unfrozen_layers) > 0: # if unfrozen layers are not specified, finetune all layers
+    if len(args.unfrozen_layers) > 0 and not args.scaled_attention_only: # if unfrozen layers are not specified, finetune all layers
         print("Unfreezing layers: ", args.unfrozen_layers)
         for param in model.parameters():
             param.requires_grad = False
@@ -174,6 +180,18 @@ if __name__ == "__main__":
                 num = int(name_tokens[2])
                 if num in args.unfrozen_layers:
                     param.requires_grad = True
+    elif args.scaled_attention_only:
+        model = wrap_multihead_attention(model)
+        for param in model.parameters():
+            param.requires_grad = False
+
+        for name, param in model.named_parameters():
+            '''
+            attn.learned_scale
+            '''
+            name_tokens = name.split('.')
+            if name_tokens[0] == "visual" and name_tokens[1] == "transformer" and name_tokens[-1] == "learned_scale":
+                param.requires_grad = True
 
     if args.dataset == 'imagenet':
         ds = load_dataset("imagenet-1k", split="train", trust_remote_code=True).shuffle(seed=42) # TODO: change to full dataset if necessary. Or shuffle being grabbing only 1000.

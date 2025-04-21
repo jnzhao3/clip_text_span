@@ -9,6 +9,7 @@ from tqdm import tqdm
 import torchvision.transforms as transforms
 from data import process_birds, process_imagenet, process_cifar100
 from torch import nn
+from modules import ScaledMultiheadAttention, wrap_multihead_attention
 ##===== END OF IMPORTS =====##
 
 ##==== CONFIGURATION ====##
@@ -28,6 +29,7 @@ print(f"Using device: {device}")
 
 model, preprocess_train, preprocess_val = open_clip.create_model_and_transforms(args.clip_model)
 tokenizer = open_clip.get_tokenizer(args.clip_model)
+
 model.to(device)
 
 loss_fn = nn.CrossEntropyLoss()
