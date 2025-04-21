@@ -44,13 +44,26 @@ pretrained = 'laion2b_s34b_b88k'
 # imagenet_path = '/data/cifar-100-python/' # only needed for the nn search
 
 # ==== Model Setup ====
-model, _, preprocess = create_model_and_transforms(args.model_path, pretrained=pretrained)
+if args.model_path and args.model_path.endswith((".pt", ".pth")):
+    model, _, preprocess = create_model_and_transforms("ViT-B-16", pretrained=pretrained)
+    checkpoint = torch.load(args.model_path, map_location=args.device)
+
+    if "model_state_dict" in checkpoint:
+        state_dict = checkpoint["model_state_dict"]
+    elif "model" in checkpoint:
+        state_dict = checkpoint["model"]
+    else:
+        state_dict = checkpoint
+
+    model.load_state_dict(state_dict, strict=False)
+else:
+    model, _, preprocess = create_model_and_transforms(args.model_path, pretrained=pretrained)
 
 model.to(device)
 model.eval()
 context_length = model.context_length
 vocab_size = model.vocab_size
-tokenizer = get_tokenizer(args.model_path)
+tokenizer = get_tokenizer("ViT-B-16")
 
 print("Model parameters:", f"{np.sum([int(np.prod(p.shape)) for p in model.parameters()]):,}")
 print("Context length:", context_length)
@@ -82,7 +95,8 @@ if args.dataset == 'CIFAR100':
     images = torch.stack([dataset[i][0] for i in selected_indices])
     image_pils = [dataset.data[i] for i in selected_indices]
 
-output_dir = Path("CIFAR_100_saliency_maps")
+model_id = args.model_path.replace("/", "_").replace(".", "_") if args.model_path else "ViT-B-16"
+output_dir = Path(f"CIFAR_100_saliency_maps/{model_id}")
 output_dir.mkdir(parents=True, exist_ok=True)
 
 # ==== Inference and Visualization ====
