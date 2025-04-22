@@ -33,6 +33,9 @@ parser.add_argument('--data_dir', type=str, default='./datasets', help='Path to 
 parser.add_argument('--device', type=str, default='cuda:0', help='Device to run the model on')
 parser.add_argument('--images_per_class', type=int, default=1, help='Number of images per fine class to visualize')
 parser.add_argument('--model_path', type=str, default=None, help='Path to model checkpoint')
+parser.add_argument('--semantic_shift', type=str, default='', help='Semantic shift to apply')
+parser.add_argument('--semantic_shuffle', type=bool, default=False, help='Shuffle classes')
+
 args = parser.parse_args()
 
 wandb.init(project="CIFAR100_Saliency", name="saliency_map_run", config=vars(args))
@@ -81,6 +84,12 @@ if args.dataset == 'CIFAR100':
         transforms.Normalize((0.5071, 0.4865, 0.4409), (0.2673, 0.2564, 0.2761))
     ])
     dataset = datasets.CIFAR100(root=args.data_dir, train=False, download=True, transform=transform)
+
+    # --- Semantic Shuffle ---
+    if args.semantic_shuffle:
+        np.random.seed(1)
+        np.random.shuffle(dataset.classes)
+
     coarse_targets = dataset.targets
     fine_targets = dataset.targets
     coarse_label_map = dataset.classes  # CIFAR-100 doesn't expose coarse labels natively
@@ -101,7 +110,8 @@ if args.dataset == 'CIFAR100':
     images = torch.stack(images)
 
 model_id = args.model_path.replace("/", "_").replace(".", "_") if args.model_path else "ViT-B-16"
-output_dir = Path(f"CIFAR_100_saliency_maps/{model_id}")
+suffix = "_shuffled" if args.semantic_shuffle else ""
+output_dir = Path(f"CIFAR_100_saliency_maps/{model_id}{suffix}")
 output_dir.mkdir(parents=True, exist_ok=True)
 
 # ==== Inference and Visualization ====
