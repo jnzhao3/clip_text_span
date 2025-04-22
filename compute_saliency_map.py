@@ -88,12 +88,17 @@ if args.dataset == 'CIFAR100':
     for idx, (_, target) in enumerate(dataset):
         label_to_indices[target].append(idx)
 
-    selected_indices = []
-    for label, indices in sorted(label_to_indices.items())[:10]:
-        selected_indices.extend(indices[:args.images_per_class])
+    images = []
+    image_pils = []
+    selected_labels = []
 
-    images = torch.stack([dataset[i][0] for i in selected_indices])
-    image_pils = [dataset.data[i] for i in selected_indices]
+    for label, indices in sorted(label_to_indices.items())[:10]:
+        for idx in indices[:args.images_per_class]:
+            images.append(dataset[idx][0])
+            image_pils.append(dataset.data[idx])
+            selected_labels.append(label)  # record the correct fine label
+
+    images = torch.stack(images)
 
 model_id = args.model_path.replace("/", "_").replace(".", "_") if args.model_path else "ViT-B-16"
 output_dir = Path(f"CIFAR_100_saliency_maps/{model_id}")
@@ -110,7 +115,7 @@ for i in tqdm(range(len(images)), desc="Processing images"):
         representation = model.encode_image(image, attn_method='head', normalize=False)
         attentions, mlps = prs.finalize(representation)
 
-    lines = [f"An image of a {dataset.classes[fine_targets[i]]}"]
+    lines = [f"An image of a {dataset.classes[selected_labels[i]]}"]
     texts = tokenizer(lines).to(device)  # tokenize
     class_embeddings = model.encode_text(texts)
     class_embedding = F.normalize(class_embeddings, dim=-1)
@@ -131,7 +136,7 @@ for i in tqdm(range(len(images)), desc="Processing images"):
         v = agg_map - np.mean(agg_map)
         v_norm = (v - v.min()) / (v.max() - v.min() + 1e-5)
         heatmap = np.uint8(cm.jet(v_norm) * 255)
-        label_dir = output_dir / dataset.classes[fine_targets[i]]
+        label_dir = output_dir / dataset.classes[selected_labels[i]]
         label_dir.mkdir(parents=True, exist_ok=True)
         type_dir = label_dir / agg_type
         type_dir.mkdir(parents=True, exist_ok=True)
@@ -145,18 +150,18 @@ for i in tqdm(range(len(images)), desc="Processing images"):
         heatmap_autocontrast = ImageOps.autocontrast(heatmap_rgb)
         combined.paste(heatmap_autocontrast, (224, 0))
 
-        combined_path = type_dir / f"{dataset.classes[fine_targets[i]]}_idx{i}_saliency_comparison.png"
-        orig_img_path = type_dir / f"{dataset.classes[fine_targets[i]]}_idx{i}_original.png"
-        heatmap_img_path = type_dir / f"{dataset.classes[fine_targets[i]]}_idx{i}_heatmap.png"
+        combined_path = type_dir / f"{dataset.classes[selected_labels[i]]}_idx{i}_saliency_comparison.png"
+        orig_img_path = type_dir / f"{dataset.classes[selected_labels[i]]}_idx{i}_original.png"
+        heatmap_img_path = type_dir / f"{dataset.classes[selected_labels[i]]}_idx{i}_heatmap.png"
 
         combined.save(combined_path)
         orig_img_resized.save(orig_img_path)
         heatmap_autocontrast.save(heatmap_img_path)
 
         wandb.log({
-            f"{dataset.classes[fine_targets[i]]}_{agg_type}_comparison_{i}": wandb.Image(combined, caption=f"{dataset.classes[fine_targets[i]]} [{i}] - ({agg_type} comparison)"),
-            f"{dataset.classes[fine_targets[i]]}_{agg_type}_original_{i}": wandb.Image(orig_img_resized, caption=f"{dataset.classes[fine_targets[i]]} [{i}] - original"),
-            f"{dataset.classes[fine_targets[i]]}_{agg_type}_heatmap_{i}": wandb.Image(heatmap_autocontrast, caption=f"{dataset.classes[fine_targets[i]]} [{i}] - heatmap")
+            f"{dataset.classes[selected_labels[i]]}_{agg_type}_comparison_{i}": wandb.Image(combined, caption=f"{dataset.classes[selected_labels[i]]} [{i}] - ({agg_type} comparison)"),
+            f"{dataset.classes[selected_labels[i]]}_{agg_type}_original_{i}": wandb.Image(orig_img_resized, caption=f"{dataset.classes[selected_labels[i]]} [{i}] - original"),
+            f"{dataset.classes[selected_labels[i]]}_{agg_type}_heatmap_{i}": wandb.Image(heatmap_autocontrast, caption=f"{dataset.classes[selected_labels[i]]} [{i}] - heatmap")
         })
 
 wandb.finish()
