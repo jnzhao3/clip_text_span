@@ -35,6 +35,7 @@ parser.add_argument('--images_per_class', type=int, default=1, help='Number of i
 parser.add_argument('--model_path', type=str, default=None, help='Path to model checkpoint')
 parser.add_argument('--semantic_shift', type=str, default='', help='Semantic shift to apply')
 parser.add_argument('--semantic_shuffle', type=bool, default=False, help='Shuffle classes')
+parser.add_argument('--color_sensitive_prompt', type=bool, default=False, help='Use color-sensitive text prompts like "a green apple"')
 
 args = parser.parse_args()
 
@@ -110,7 +111,12 @@ if args.dataset == 'CIFAR100':
     images = torch.stack(images)
 
 model_id = args.model_path.replace("/", "_").replace(".", "_") if args.model_path else "ViT-B-16"
-suffix = "_shuffled" if args.semantic_shuffle else ""
+suffix_parts = []
+if args.semantic_shuffle:
+    suffix_parts.append("shuffled")
+if args.color_sensitive_prompt:
+    suffix_parts.append("color_green")
+suffix = "_" + "_".join(suffix_parts) if suffix_parts else ""
 output_dir = Path(f"CIFAR_100_saliency_maps/{model_id}{suffix}")
 output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -125,7 +131,11 @@ for i in tqdm(range(len(images)), desc="Processing images"):
         representation = model.encode_image(image, attn_method='head', normalize=False)
         attentions, mlps = prs.finalize(representation)
 
-    lines = [f"An image of a {dataset.classes[selected_labels[i]]}"]
+    if args.color_sensitive_prompt:
+        # lines = [f"A green {dataset.classes[selected_labels[i]]}"]
+        lines = ["an image with green color"]
+    else:
+        lines = [f"An image of a {dataset.classes[selected_labels[i]]}"]
     texts = tokenizer(lines).to(device)  # tokenize
     class_embeddings = model.encode_text(texts)
     class_embedding = F.normalize(class_embeddings, dim=-1)
