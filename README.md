@@ -1,6 +1,6 @@
 📘 **Note**: This repository is adapted from the official [CLIP Text Decomposition](https://github.com/yossigandelsman/clip_text_span) repo by Yossi Gandelsman, Alexei A. Efros, and Jacob Steinhardt, with custom support for CIFAR-100 and transformed datasets.
 
-For scripts related to finetuning, please refer to the README in the `finetune/` subdirectory.
+For how to run the scripts related to finetuning, please refer to the README in the `finetune/` subdirectory.
 
 ## Interpreting CLIP's Image Representation via Text-Based Decomposition
 Official PyTorch Implementation
