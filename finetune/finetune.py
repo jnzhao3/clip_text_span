@@ -25,6 +25,7 @@ parser.add_argument('--run_name', type=str, default='', help='WandB run name')
 parser.add_argument('--dataset', type=str, default='birdsnap', help='Dataset name')
 parser.add_argument('--clip_model', type=str, default='hf-hub:laion/CLIP-ViT-B-16-laion2B-s34B-b88K', help='CLIP model name')
 parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
+parser.add_argument('--learning_rate', type=float, default=1e-5, help='Learning rate')
 parser.add_argument('--epochs', type=int, default=20, help='Number of epochs')
 parser.add_argument('--model_save_interval', type=int, default=5, help='Model save interval')
 parser.add_argument('--eval_interval', type=int, default=2, help='Training evaluation interval')
@@ -33,12 +34,18 @@ parser.add_argument('--unfrozen_layers', type=int, nargs='+', default=[], help='
 parser.add_argument('--semantic_shift', type=str, default='', help='Semantic shift to apply')
 parser.add_argument('--semantic_shuffle', type=bool, default=False, help='Shuffle classes')
 parser.add_argument('--scaled_attention_only', type=bool, default=False, help='Use scaled attention only')
+parser.add_argument('--full_zeroth_scaled_attention', type=bool, default=False, help='Use full zeroth scaled attention')
+parser.add_argument('--adamw', type=bool, default=False, help='Use AdamW optimizer')
+parser.add_argument('--mlp_only', type=bool, default=False, help='Use MLP only')
+parser.add_argument('--shift_shuffle', type=int, default=0, help='Number of classes to shift and shuffle')
+parser.add_argument('--post_only', type=bool, default=False, help='Use post only')
+
 ##===== END OF CONFIGURATION ====##
 
 ##===== FINETUNING SCRIPT =====##
 class Finetuner():
 
-    def __init__(self, model, tokenizer, dataset, classes_to_index, index_to_classes, captions, epochs, batch_size, wandb_project, wandb_run_name, model_save_interval, eval_interval):
+    def __init__(self, model, tokenizer, dataset, classes_to_index, index_to_classes, captions, epochs, batch_size, learning_rate, wandb_project, wandb_run_name, model_save_interval, eval_interval):
         self.model = model
         self.tokenizer = tokenizer
         # self.preprocess_train = preprocess_train
@@ -51,7 +58,11 @@ class Finetuner():
         self.model_save_interval = model_save_interval
         self.eval_interval = eval_interval
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-5)
+        # self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
+        if args.adamw:
+            self.optimizer = optim.AdamW(self.model.parameters(), lr=learning_rate, weight_decay=0.001)
+        else:
+            self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
         if wandb_run_name:
             wandb.init(project=wandb_project, name=wandb_run_name, config=args)
         else:
@@ -180,6 +191,18 @@ if __name__ == "__main__":
                 num = int(name_tokens[2])
                 if num in args.unfrozen_layers:
                     param.requires_grad = True
+
+    elif args.scaled_attention_only and len(args.unfrozen_layers) > 0:
+        print("Unfreezing layers: ", args.unfrozen_layers)
+        for param in model.parameters():
+            param.requires_grad = False
+        
+        for name, param in model.named_parameters():
+            name_tokens = name.split('.')
+            if name_tokens[0] == "visual" and name_tokens[1] == "transformer" and name_tokens[-1] == "learned_scale":
+                num = int(name_tokens[3])
+                if num in args.unfrozen_layers:
+                    param.requires_grad = True
     elif args.scaled_attention_only:
         model = wrap_multihead_attention(model)
         for param in model.parameters():
@@ -191,6 +214,60 @@ if __name__ == "__main__":
             '''
             name_tokens = name.split('.')
             if name_tokens[0] == "visual" and name_tokens[1] == "transformer" and name_tokens[-1] == "learned_scale":
+                param.requires_grad = True
+    elif args.full_zeroth_scaled_attention:
+        model = wrap_multihead_attention(model)
+        for param in model.parameters():
+            param.requires_grad = False
+
+        for name, param in model.named_parameters():
+            '''
+            attn.learned_scale
+            '''
+            name_tokens = name.split('.')
+            if name_tokens[0] == "visual" and name_tokens[1] == "transformer":
+                num = int(name_tokens[3])
+                if num == 0 and name_tokens[-1] != "learned_scale":
+                    param.requires_grad = True
+                elif num != 0 and name_tokens[-1] == "learned_scale":
+                    param.requires_grad = True
+
+    elif args.mlp_only:
+        for param in model.parameters():
+            param.requires_grad = False
+        
+        for name, param in model.named_parameters():
+            name_tokens = name.split('.')
+            if name_tokens[0] == "visual" and name_tokens[1] == "transformer" and name_tokens[4] == "mlp":
+                param.requires_grad = True
+
+    elif args.post_only:
+        for param in model.parameters():
+            param.requires_grad = False
+
+        # visual.transformer.resblocks.11.ln_2.weight
+        # visual.transformer.resblocks.11.ln_2.bias
+        # visual.transformer.resblocks.11.mlp.c_fc.weight
+        # visual.transformer.resblocks.11.mlp.c_fc.bias
+        # visual.transformer.resblocks.11.mlp.c_proj.weight
+        # visual.transformer.resblocks.11.mlp.c_proj.bias
+
+        # visual.ln_post.weight
+        # visual.ln_post.bias
+        unfrozen = ["visual.transformer.resblocks.11.ln_2.weight",
+                    "visual.transformer.resblocks.11.ln_2.bias",
+                    "visual.transformer.resblocks.11.mlp.c_fc.weight",
+                    "visual.transformer.resblocks.11.mlp.c_fc.bias",
+                    "visual.transformer.resblocks.11.mlp.c_proj.weight",
+                    "visual.transformer.resblocks.11.mlp.c_proj.bias",
+                    "visual.ln_post.weight",
+                    "visual.ln_post.bias"]
+        
+        for name, param in model.named_parameters():
+            # name_tokens = name.split('.')
+            # if name_tokens[0] == "visual" and name_tokens[1] == "transformer" and name_tokens[4] == "post_attention_layernorm":
+            #     param.requires_grad = True
+            if name in unfrozen:
                 param.requires_grad = True
 
     if args.dataset == 'imagenet':
@@ -206,7 +283,7 @@ if __name__ == "__main__":
         ds = load_dataset("cifar100", split="train", trust_remote_code=True)
         ds = ds.shuffle(seed=42)
         json_contents = json.load(open("./cifar100_prompts.json"))
-        ds, classes_to_index, index_to_classes, captions = process_cifar100(ds, json_contents, preprocess_train, transform=args.transform, semantic_shift=args.semantic_shift, semantic_shuffle=args.semantic_shuffle)
+        ds, classes_to_index, index_to_classes, captions = process_cifar100(ds, json_contents, preprocess_train, transform=args.transform, semantic_shift=args.semantic_shift, semantic_shuffle=args.semantic_shuffle, shift_shuffle=args.shift_shuffle)
 
     finetuner = Finetuner(
         model=model,
@@ -219,6 +296,7 @@ if __name__ == "__main__":
         captions=captions,
         epochs=args.epochs,  # Number of epochs
         batch_size=args.batch_size,
+        learning_rate=args.learning_rate,
         wandb_project=args.wandb_project,
         wandb_run_name=args.run_name,
         model_save_interval=args.model_save_interval,

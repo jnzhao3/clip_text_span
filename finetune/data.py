@@ -42,7 +42,7 @@ def preprocess_fn(x, preprocess):
     x["image"] = new_images
     return x
 
-def process_cifar100(dataset, json, preprocess, transform=None, semantic_shift='', semantic_shuffle=False):
+def process_cifar100(dataset, json, preprocess, transform=None, semantic_shift='', semantic_shuffle=False, shift_shuffle=0):
     '''
     {
     'img': PIL.Image.Image,
@@ -56,12 +56,62 @@ def process_cifar100(dataset, json, preprocess, transform=None, semantic_shift='
     classes_to_index = {classes[i]: i for i in range(len(classes))}
     index_to_classes = {i: classes[i] for i in range(len(classes))}
 
+    if shift_shuffle > 0:
+        new_front = classes[-shift_shuffle:]
+        classes = classes[:-shift_shuffle]
+        classes = new_front + classes
+
     assert len(classes) == 100, "CIFAR100 dataset should have 100 classes"
 
     # Prep the dataset columns
     dataset = dataset.cast_column("img", Image())
     dataset = dataset.rename_column("img", "image")
     dataset = dataset.rename_column("fine_label", "index_label")
+
+    dataset.set_format(type="torch", columns=["image", "index_label"])
+
+    transform_fn = transforms.Compose([
+        transforms.Lambda(lambda x: image_transform(x, transform)),
+        transforms.Lambda(lambda x: preprocess_fn(x, preprocess))
+    ])
+    dataset.set_transform(transform_fn)
+
+    templates = json["templates"]
+    captions = []
+    for i in range(len(classes)):
+        t = []
+        for j in range(len(templates)):
+            t.append(templates[j][0] + classes[i] + semantic_shift + templates[j][1])
+        captions.append(t)
+    
+    return dataset, classes_to_index, index_to_classes, captions
+
+def process_cifarc(dataset, json, preprocess, transform=None, semantic_shift='', semantic_shuffle=False, shift_shuffle=0):
+    '''
+    {
+    'image': PIL.Image.Image,
+    'label': 0,
+    {'image': <PIL.PngImagePlugin.PngImageFile image mode=RGB size=32x32 at 0x7F8FAD2E3080>, 'label': 83, 'corruption_name': 'snow', 'corruption_level': 1}
+    }'''
+    classes = json["classes"]
+    if semantic_shuffle:
+        np.random.seed(1)
+        np.random.shuffle(classes)
+    classes_to_index = {classes[i]: i for i in range(len(classes))}
+    index_to_classes = {i: classes[i] for i in range(len(classes))}
+
+    if shift_shuffle > 0:
+        new_front = classes[-shift_shuffle:]
+        classes = classes[:-shift_shuffle]
+        classes = new_front + classes
+
+    assert len(classes) == 100, "CIFAR100 dataset should have 100 classes"
+
+    # Prep the dataset columns
+    dataset = dataset.cast_column("image", Image())
+    # dataset = dataset.rename_column("img", "image")
+    import ipdb; ipdb.set_trace()
+    dataset = dataset.rename_column("label", "index_label")
 
     dataset.set_format(type="torch", columns=["image", "index_label"])
 
