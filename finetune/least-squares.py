@@ -165,7 +165,14 @@ with torch.no_grad(), autocast(device_type=device.type):
         # transformed_image_features_ls = transformed_image_features @ A + b
         # transformed_image_features_ls /= transformed_image_features_ls.norm(dim=-1, keepdim=True)
         
+        # Load the precomputed rank-1 difference vector
+        import pickle
+        with open("rank_1_average.pkl", "rb") as f:
+            diff = torch.tensor(pickle.load(f), dtype=torch.float32).to(device)
+        #diff = diff.to(device=device)
+        
         transformed_image_features_ls = transformed_image_features + diff
+        
 
         image = image.unsqueeze(0).to(device=device)
         image_features = model.encode_image(image)
