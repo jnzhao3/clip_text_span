@@ -1,3 +1,5 @@
+> 📘 **Note**: This repository is adapted from the official [CLIP Text Decomposition](https://github.com/yossigandelsman/clip_text_span) repo by Yossi Gandelsman, Alexei A. Efros, and Jacob Steinhardt, with custom support for CIFAR-100 and transformed datasets.
+
 ## Interpreting CLIP's Image Representation via Text-Based Decomposition
 Official PyTorch Implementation
 
@@ -17,10 +19,11 @@ conda env create -f environment.yml
 conda activate prsclip
 ```
 ### Preprocessing
-To obtain the projected residual stream components for the ImageNet validation set, including the contributions from multi-head attentions and MLPs, please run one of the following instructions:
+To obtain the projected residual stream components for your custom dataset (e.g., CIFAR-100 or grayscale-transformed sets), in this adapted version of the repo, including the contributions from multi-head attentions and MLPs, please run one of the following (and ensure `--data_path` points to the directory containing your .npy features or dataset images):
 
 ```bash
-python compute_prs.py --dataset imagenet --device cuda:0 --model ViT-H-14 --pretrained laion2b_s32b_b79k --data_path <PATH>
+python compute_prs.py --dataset cifar100_grayscale --device cuda:0 --model ViT-B-16 --pretrained laion2b_s34b_b88k --data_path ./data/cifar100_grayscale
+```
 python compute_prs.py --dataset imagenet --device cuda:0 --model ViT-L-14 --pretrained laion2b_s32b_b82k --data_path <PATH>
 python compute_prs.py --dataset imagenet --device cuda:0 --model ViT-B-16 --pretrained laion2b_s34b_b88k --data_path <PATH>
 ```
