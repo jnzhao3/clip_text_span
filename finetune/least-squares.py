@@ -114,7 +114,7 @@ with torch.no_grad(), torch.cuda.amp.autocast():
     text_features /= text_features.norm(dim=-1, keepdim=True)
 
 ##==== LEARN LEAST SQUARES =====##
-train_dataloader = DataLoader(train_ds, batch_size=500, shuffle=True)
+train_dataloader = DataLoader(train_ds, batch_size=10000, shuffle=True)
 
 # for sample in train_dataloader:
 with torch.no_grad(), autocast(device_type=device.type):
@@ -129,7 +129,7 @@ with torch.no_grad(), autocast(device_type=device.type):
     image_features = model.encode_image(image)
     image_features /= image_features.norm(dim=-1, keepdim=True)
     transformed_image_features = model.encode_image(transformed_image)
-    transformed_image_features /= image_features.norm(dim=-1, keepdim=True)
+    transformed_image_features /= transformed_image_features.norm(dim=-1, keepdim=True)
 
     ones = torch.ones(transformed_image_features.size(0), 1, dtype=transformed_image_features.dtype, device=device)
     X_aug = torch.cat([transformed_image_features, ones], dim=1)
@@ -153,7 +153,7 @@ with torch.no_grad(), autocast(device_type=device.type):
 
 
 with torch.no_grad(), autocast(device_type=device.type):
-    for sample in train_ds:
+    for sample in train_ds: # TODO: change this back
         index_label = sample["index_label"]
         image = sample["image"]
         transformed_image = transforms.Grayscale(num_output_channels=3)(image).to(device=device)
@@ -162,7 +162,10 @@ with torch.no_grad(), autocast(device_type=device.type):
         transformed_image_features = model.encode_image(transformed_image)
         transformed_image_features /= transformed_image_features.norm(dim=-1, keepdim=True)
         # transformed_image_features = transformed_image_features.to(torch.float32)
-        transformed_image_features_ls = transformed_image_features @ A + b
+        # transformed_image_features_ls = transformed_image_features @ A + b
+        # transformed_image_features_ls /= transformed_image_features_ls.norm(dim=-1, keepdim=True)
+        
+        transformed_image_features_ls = transformed_image_features + diff
 
         image = image.unsqueeze(0).to(device=device)
         image_features = model.encode_image(image)
