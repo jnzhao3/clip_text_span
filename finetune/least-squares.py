@@ -1,3 +1,4 @@
+import test
 import torch
 from PIL import Image
 import open_clip
@@ -6,7 +7,7 @@ import json
 import argparse
 import wandb
 from tqdm import tqdm
-import torchvision.transforms as transforms
+# import torchvision.transforms as transforms
 from torchvision import transforms
 from data import process_birds, process_imagenet, process_cifar100, process_cifarc
 from torch import nn
@@ -69,11 +70,15 @@ elif args.dataset == 'cifar100':
             transforms.ToTensor(),
         ])
         # ds = datasets.CIFAR100(root="./data", train=True, download=True, transform=transform)
-        ds = load_dataset("cifar100", split="test", trust_remote_code=True)
-        ds = ds.shuffle(seed=42)
-        # ds = ds.select(range(1000))
+        train_ds = load_dataset("cifar100", split="train", trust_remote_code=True)
+        train_ds = train_ds.shuffle(seed=42)
+        train_ds = train_ds.select(range(1000))
+        test_ds = load_dataset("cifar100", split="test", trust_remote_code=True)
+        test_ds = test_ds.shuffle(seed=42)
+        test_ds = test_ds.select(range(1000))
         json_contents = json.load(open("./cifar100_prompts.json"))
-        ds, classes_to_index, index_to_classes, captions = process_cifar100(ds, json_contents, preprocess_val, transform=args.transform, semantic_shift=args.semantic_shift, semantic_shuffle=args.semantic_shuffle, shift_shuffle=args.shift_shuffle)
+        train_ds, classes_to_index, index_to_classes, captions = process_cifar100(train_ds, json_contents, preprocess_val, transform=args.transform, semantic_shift=args.semantic_shift, semantic_shuffle=args.semantic_shuffle, shift_shuffle=args.shift_shuffle)
+        test_ds, _, _, _ = process_cifar100(test_ds, json_contents, preprocess_val, transform=args.transform, semantic_shift=args.semantic_shift, semantic_shuffle=args.semantic_shuffle, shift_shuffle=args.shift_shuffle)
 # elif args.dataset == 'cifarc':
 #     ds = load_dataset("randall-lab/cifar100-c", split="test", trust_remote_code=True)
 #     ds = ds.shuffle(seed=42)
@@ -87,76 +92,98 @@ elif args.dataset == 'cifar100':
 ##==== WANDB CONFIGURATION ====##
 wandb.init(project=args.wandb_project, config=args)
 
-images = [wandb.Image(ds[i]["image"], caption=f"Label: {index_to_classes[ds[i]['index_label']]}") for i in range(5)]
+images = [wandb.Image(train_ds[i]["image"], caption=f"Label: {index_to_classes[train_ds[i]['index_label']]}") for i in range(5)]
 wandb.log({"images": images})
 
 ##==== WANDB CONFIGURATION END ====##
 
-# text = []
-# for class_caption in captions:
-#     text.append(tokenizer(class_caption).to(device=device))
+text = []
+for class_caption in captions:
+    text.append(tokenizer(class_caption).to(device=device))
 
-# with torch.no_grad(), torch.cuda.amp.autocast():
-    # correct_counter = 0
-    # total_counter = 0
-    # loss = 0
-    # text_features = []
-    # for t in tqdm(text):
-    #     t_avg = (model.encode_text(t).sum(dim=0) / len(t))
-    #     text_features.append(t_avg)
+with torch.no_grad(), torch.cuda.amp.autocast():
+    correct_counter = 0
+    total_counter = 0
+    loss = 0
+    text_features = []
+    for t in tqdm(text):
+        t_avg = (model.encode_text(t).sum(dim=0) / len(t))
+        text_features.append(t_avg)
 
-    # text_features = torch.stack(text_features)
-    # text_features /= text_features.norm(dim=-1, keepdim=True)
+    text_features = torch.stack(text_features)
+    text_features /= text_features.norm(dim=-1, keepdim=True)
 
-train_dataloader = DataLoader(ds, batch_size=100, shuffle=True)
+##==== LEARN LEAST SQUARES =====##
+train_dataloader = DataLoader(train_ds, batch_size=500, shuffle=True)
 
-for sample in train_dataloader:
-    with torch.no_grad(), autocast(device_type=device.type):
-        
-        # index_label = sample["index_label"]
-        # image = image.unsqueeze(0).to(device=device)
-        # transformed_image = image.unsqueeze(0).to(device=device)[0]
-        # transformed_image = transformed_image.unsqueeze(0).to(device=device)
-        image = sample["image"].to(device, dtype=torch.float16, non_blocking=True)
-        transformed_image = transforms.Grayscale(num_output_channels=3)(image).to(device, dtype=torch.float16, non_blocking=True)
-    
+# for sample in train_dataloader:
+with torch.no_grad(), autocast(device_type=device.type):
+    sample = next(iter(train_dataloader))
+    # index_label = sample["index_label"]
+    # image = image.unsqueeze(0).to(device=device)
+    # transformed_image = image.unsqueeze(0).to(device=device)[0]
+    # transformed_image = transformed_image.unsqueeze(0).to(device=device)
+    image = sample["image"].to(device, dtype=torch.float16, non_blocking=True)
+    transformed_image = transforms.Grayscale(num_output_channels=3)(image).to(device, dtype=torch.float16, non_blocking=True)
+
+    image_features = model.encode_image(image)
+    image_features /= image_features.norm(dim=-1, keepdim=True)
+    transformed_image_features = model.encode_image(transformed_image)
+    transformed_image_features /= image_features.norm(dim=-1, keepdim=True)
+
+    ones = torch.ones(transformed_image_features.size(0), 1, dtype=transformed_image_features.dtype, device=device)
+    X_aug = torch.cat([transformed_image_features, ones], dim=1)
+
+    # cast to float32 for lstsq
+    X_aug = X_aug.to(torch.float32)
+    image_features = image_features.to(torch.float32)
+    W = torch.linalg.lstsq(X_aug, image_features).solution
+
+    A = W[:-1, :]
+    b = W[-1, :]
+
+    # loss = transformed_image_features @ A.T + b
+    # loss = nn.functional.mse_loss(loss, image_features)
+
+    # import ipdb; ipdb.set_trace()
+
+    print("finished calculating least squares")
+
+###==== END OF LEARN LEAST SQUARES =====##
+
+
+with torch.no_grad(), autocast(device_type=device.type):
+    for sample in train_ds:
+        index_label = sample["index_label"]
+        image = sample["image"]
+        transformed_image = transforms.Grayscale(num_output_channels=3)(image).to(device=device)
+        transformed_image = transformed_image.unsqueeze(0).to(device=device)
+
+        transformed_image_features = model.encode_image(transformed_image)
+        transformed_image_features /= transformed_image_features.norm(dim=-1, keepdim=True)
+        # transformed_image_features = transformed_image_features.to(torch.float32)
+        transformed_image_features_ls = transformed_image_features @ A + b
+
+        image = image.unsqueeze(0).to(device=device)
         image_features = model.encode_image(image)
         image_features /= image_features.norm(dim=-1, keepdim=True)
-        transformed_image_features = model.encode_image(transformed_image)
-        transformed_image_features /= image_features.norm(dim=-1, keepdim=True)
 
-        ones = torch.ones(transformed_image_features.size(0), 1, dtype=transformed_image_features.dtype, device=device)
-        X_aug = torch.cat([transformed_image_features, ones], dim=1)
+        logits = (100.0 * transformed_image_features_ls @ text_features.T)
+        text_probs = logits.softmax(dim=-1)
+        max_prob, index = text_probs[0].max(dim=-1)
+        # grab top 5
+        top_five_probs, top_five_indices = text_probs[0].topk(5)
+        index = index.item()
+        is_correct = index == index_label
+        l = loss_fn(logits, torch.tensor([index_label]).to(device=device))
+        loss += l.item()
+        if is_correct:
+            correct_counter += 1
+        else:
+            print(f"Incorrectly Predicted: {index_to_classes[index]}, Actual: {index_to_classes[index_label]}, Probability: {max_prob.item():.4f}")
+            print(f"Top 5 Predictions: {[index_to_classes[i] for i in top_five_indices.tolist()]}")
+        total_counter += 1
 
-        # cast to float32 for lstsq
-        X_aug = X_aug.to(torch.float32)
-        image_features = image_features.to(torch.float32)
-        W = torch.linalg.lstsq(X_aug, image_features).solution
-
-        A = W[:-1, :]
-        b = W[-1, :]
-
-        import ipdb; ipdb.set_trace()
-
-    
-    import ipdb; ipdb.set_trace()
-
-        # logits = (100.0 * image_features @ text_features.T)
-        # text_probs = logits.softmax(dim=-1)
-        # max_prob, index = text_probs[0].max(dim=-1)
-        # # grab top 5
-        # top_five_probs, top_five_indices = text_probs[0].topk(5)
-        # index = index.item()
-        # is_correct = index == index_label
-        # l = loss_fn(logits, torch.tensor([index_label]).to(device=device))
-        # loss += l.item()
-        # if is_correct:
-        #     correct_counter += 1
-        # else:
-        #     print(f"Incorrectly Predicted: {index_to_classes[index]}, Actual: {index_to_classes[index_label]}, Probability: {max_prob.item():.4f}")
-        #     print(f"Top 5 Predictions: {[index_to_classes[i] for i in top_five_indices.tolist()]}")
-        # total_counter += 1
-
-    # print(f"Accuracy: {correct_counter / total_counter * 100:.2f}%")
-    # print(f"Total samples: {total_counter}, Correct predictions: {correct_counter}")
-    # print(f"Average Loss: {loss / total_counter:.4f}")
+    print(f"Accuracy: {correct_counter / total_counter * 100:.2f}%")
+    print(f"Total samples: {total_counter}, Correct predictions: {correct_counter}")
+    print(f"Average Loss: {loss / total_counter:.4f}")
