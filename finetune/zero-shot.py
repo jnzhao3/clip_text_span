@@ -1,71 +1,126 @@
 import torch
 from PIL import Image
 import open_clip
-from datasets import Dataset, Image
+from datasets import Dataset, Image, load_dataset
 import json
+import argparse
+import wandb
+from tqdm import tqdm
+import torchvision.transforms as transforms
+from data import process_birds, process_imagenet, process_cifar100
+from torch import nn
+from modules import ScaledMultiheadAttention, wrap_multihead_attention
 ##===== END OF IMPORTS =====##
+
+##==== CONFIGURATION ====##
+parser = argparse.ArgumentParser()
+parser.add_argument('--wandb_project', type=str, default='zero-shot', help='WandB project name')
+parser.add_argument('--dataset', type=str, default='birdsnap', help='Dataset name')
+parser.add_argument('--clip_model', type=str, default='hf-hub:laion/CLIP-ViT-B-16-laion2B-s34B-b88K', help='CLIP model name')
+parser.add_argument('--transform', type=str, default=None, help='Grayscale images')
+parser.add_argument('--semantic_shift', type=str, default='', help='Semantic shift to apply')
+parser.add_argument('--semantic_shuffle', type=bool, default=False, help='Shuffle classes')
+parser.add_argument('--wrap', type=bool, default=False, help='Semantic shift to apply')
+parser.add_argument('--checkpoint', type=str, default='', help='Path to checkpoint file')
+parser.add_argument('--checkpoint_epoch', type=int, default=0, help='Epoch of the checkpoint to load')
+
+args = parser.parse_args()
 
 ##===== MODEL CONFIGURATION =====##
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
 
-model, preprocess_train, preprocess_val = open_clip.create_model_and_transforms('hf-hub:laion/CLIP-ViT-L-14-laion2B-s32B-b82K')
-tokenizer = open_clip.get_tokenizer('hf-hub:laion/CLIP-ViT-L-14-laion2B-s32B-b82K')
+model, preprocess_train, preprocess_val = open_clip.create_model_and_transforms(args.clip_model)
+tokenizer = open_clip.get_tokenizer(args.clip_model)
 
+if args.wrap:
+    model = wrap_multihead_attention(model)
+
+if args.checkpoint:
+    run = wandb.init()
+    artifact = wandb.use_artifact(args.checkpoint, type='model')
+    artifact_dir = artifact.download()
+    checkpoint = torch.load(f"{artifact_dir}/checkpoint_epoch_{args.checkpoint_epoch}.pt")
+
+    model.load_state_dict(checkpoint['model_state_dict'])
+    # optimizer = torch.optim.Adam(model.parameters())
 model.to(device)
+
+loss_fn = nn.CrossEntropyLoss()
 ##===== END OF MODEL CONFIGURATION =====##
 
 ##==== IMAGE PREPROCESSING ====##
-# img_path = "../country211/test/CN/413200_30.002219_93.881607.jpg"
-# Load the dataset
-ds = Dataset.from_file("../birdsnap_dataset/train/data-00001-of-00139.arrow")
+if args.dataset == 'birdsnap':
+    ds = Dataset.from_file("../birdsnap_dataset/train/data-00001-of-00139.arrow")
+    json_contents = json.load(open("./birdsnap_prompts.json"))
+    ds, classes_to_index, index_to_classes, captions = process_birds(ds, json_contents)
+elif args.dataset == 'imagenet_sketch':
+    ds = load_dataset("imagenet_sketch", split="train", trust_remote_code=True)
+    ds = ds.select(range(1000))
+    json_contents = json.load(open("./imagenet_prompts.json"))
+    ds, classes_to_index, index_to_classes, captions = process_imagenet(ds, json_contents, transform=args.transform)
+elif args.dataset == 'cifar100':
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+        ])
+        # ds = datasets.CIFAR100(root="./data", train=True, download=True, transform=transform)
+        ds = load_dataset("cifar100", split="train", trust_remote_code=True)
+        ds = ds.shuffle(seed=42)
+        ds = ds.select(range(1000))
+        json_contents = json.load(open("./cifar100_prompts.json"))
+        ds, classes_to_index, index_to_classes, captions = process_cifar100(ds, json_contents, preprocess_val, transform=args.transform, semantic_shift=args.semantic_shift, semantic_shuffle=args.semantic_shuffle)
 
-# Cast the image column to the Image feature
-ds = ds.cast_column("image", Image())  # Replace 'image_column_name' with your actual column name
-
-# Access an image
-# image = preprocess_val(ds[0]["image"]).unsqueeze(0).cuda(device=device)
 ##==== END OF IMAGE PREPROCESSING ====##
 
-##===== TEXT PREPROCESSING ====##
-# image = preprocess_val(Image.open(img_path)).unsqueeze(0).cuda(device=device)
-# text = tokenizer(["a tree", "a bird", "a cat"]).cuda(device=device)
-json_contents = json.load(open("./birdsnap_prompts.json"))
-classes = json_contents["classes"]
-templates = json_contents["templates"]
+##==== WANDB CONFIGURATION ====##
+wandb.init(project=args.wandb_project, config=args)
 
-captions = []
-for i in range(len(classes)):
-    # for j in range(len(templates)):
-        # captions.append(templates[j].replace("{classname}", classes[i]))
-    captions.append(templates[0][0] + classes[i] + templates[0][1])
-text = tokenizer(captions).cuda(device=device)
-text_features = model.encode_text(text)
-text_features /= text_features.norm(dim=-1, keepdim=True)
+images = [wandb.Image(ds[i]["image"], caption=f"Label: {index_to_classes[ds[i]['index_label']]}") for i in range(5)]
+wandb.log({"images": images})
+
+##==== WANDB CONFIGURATION END ====##
+
+text = []
+for class_caption in captions:
+    text.append(tokenizer(class_caption).to(device=device))
 
 with torch.no_grad(), torch.cuda.amp.autocast():
     correct_counter = 0
     total_counter = 0
-    for image, label in ds[:1]:
-        image = preprocess_val(image).unsqueeze(0).cuda(device=device)
+    loss = 0
+    text_features = []
+    for t in tqdm(text):
+        t_avg = (model.encode_text(t).sum(dim=0) / len(t))
+        text_features.append(t_avg)
+
+    text_features = torch.stack(text_features)
+    text_features /= text_features.norm(dim=-1, keepdim=True)
+
+    for sample in ds:
+        image = sample["image"]
+        index_label = sample["index_label"]
+        image = image.unsqueeze(0).to(device=device)
         
         image_features = model.encode_image(image)
         image_features /= image_features.norm(dim=-1, keepdim=True)
+        import ipdb; ipdb.set_trace()
 
-        text_probs = (100.0 * image_features @ text_features.T).softmax(dim=-1)
+        logits = (100.0 * image_features @ text_features.T)
+        text_probs = logits.softmax(dim=-1)
         max_prob, index = text_probs[0].max(dim=-1)
-        if classes[index] == label:
+        # grab top 5
+        top_five_probs, top_five_indices = text_probs[0].topk(5)
+        index = index.item()
+        is_correct = index == index_label
+        l = loss_fn(logits, torch.tensor([index_label]).to(device=device))
+        loss += l.item()
+        if is_correct:
             correct_counter += 1
         else:
-            print(f"Predicted: {classes[index]}, Actual: {label}")
+            print(f"Incorrectly Predicted: {index_to_classes[index]}, Actual: {index_to_classes[index_label]}, Probability: {max_prob.item():.4f}")
+            print(f"Top 5 Predictions: {[index_to_classes[i] for i in top_five_indices.tolist()]}")
         total_counter += 1
 
     print(f"Accuracy: {correct_counter / total_counter * 100:.2f}%")
-
-# print("Label probs:", text_probs)  # prints: [[1., 0., 0.]]
-
-# top_five_probs, indices = torch.topk(text_probs[0], 5)
-# top_five_labels = [classes[i] for i in indices]
-# print("Top 5 probabilities:", top_five_probs)
-# print("Top 5 labels:", top_five_labels)
-# print("True label:", ds[0]["label"])
-
+    print(f"Total samples: {total_counter}, Correct predictions: {correct_counter}")
+    print(f"Average Loss: {loss / total_counter:.4f}")
