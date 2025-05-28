@@ -8,3 +8,7 @@ artifacts
 *.pt
 
 output_dir
+wandb
+birdsnap_dataset
+country211
+*.tgz
