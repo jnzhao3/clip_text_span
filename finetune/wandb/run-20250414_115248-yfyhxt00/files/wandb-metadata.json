@@ -1,0 +1,88 @@
+{
+  "os": "Linux-5.4.0-109-generic-x86_64-with-glibc2.31",
+  "python": "CPython 3.11.9",
+  "startedAt": "2025-04-14T18:52:48.398071Z",
+  "args": [
+    "--dataset",
+    "cifar100"
+  ],
+  "program": "/home/jennifer/clip_text_span/finetune/zero-shot.py",
+  "codePath": "finetune/zero-shot.py",
+  "git": {
+    "remote": "git@github.com:jnzhao3/clip_text_span.git",
+    "commit": "25dcdb541189e5dd7d7a3cf9e38a17c257dd5f9e"
+  },
+  "email": "jnzhao3@gmail.com",
+  "root": "/home/jennifer/clip_text_span/finetune",
+  "host": "grace",
+  "executable": "/home/jennifer/miniconda3/envs/prsclip/bin/python",
+  "codePathLocal": "zero-shot.py",
+  "cpu_count": 24,
+  "cpu_count_logical": 48,
+  "gpu": "NVIDIA GeForce GTX 1080 Ti",
+  "gpu_count": 8,
+  "disk": {
+    "/": {
+      "total": "1006993575936",
+      "used": "841132367872"
+    }
+  },
+  "memory": {
+    "total": "404348375040"
+  },
+  "cpu": {
+    "count": 24,
+    "countLogical": 48
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA GeForce GTX 1080 Ti",
+      "memoryTotal": "11811160064",
+      "cudaCores": 3584,
+      "architecture": "Pascal"
+    },
+    {
+      "name": "NVIDIA GeForce GTX 1080 Ti",
+      "memoryTotal": "11811160064",
+      "cudaCores": 3584,
+      "architecture": "Pascal"
+    },
+    {
+      "name": "NVIDIA GeForce GTX 1080 Ti",
+      "memoryTotal": "11811160064",
+      "cudaCores": 3584,
+      "architecture": "Pascal"
+    },
+    {
+      "name": "NVIDIA GeForce GTX 1080 Ti",
+      "memoryTotal": "11811160064",
+      "cudaCores": 3584,
+      "architecture": "Pascal"
+    },
+    {
+      "name": "NVIDIA GeForce GTX 1080 Ti",
+      "memoryTotal": "11811160064",
+      "cudaCores": 3584,
+      "architecture": "Pascal"
+    },
+    {
+      "name": "NVIDIA GeForce GTX 1080 Ti",
+      "memoryTotal": "11811160064",
+      "cudaCores": 3584,
+      "architecture": "Pascal"
+    },
+    {
+      "name": "NVIDIA GeForce GTX 1080 Ti",
+      "memoryTotal": "11811160064",
+      "cudaCores": 3584,
+      "architecture": "Pascal"
+    },
+    {
+      "name": "NVIDIA GeForce GTX 1080 Ti",
+      "memoryTotal": "11811160064",
+      "cudaCores": 3584,
+      "architecture": "Pascal"
+    }
+  ],
+  "cudaVersion": "12.2"
+}

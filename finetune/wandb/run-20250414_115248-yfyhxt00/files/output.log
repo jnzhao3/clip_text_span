@@ -1,0 +1,384 @@
+/home/jennifer/clip_text_span/finetune/zero-shot.py:73: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.no_grad(), torch.cuda.amp.autocast():
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 100/100 [00:09<00:00, 10.91it/s]
+Incorrectly Predicted: ray, Actual: shark, Probability: 0.7918
+Top 5 Predictions: ['ray', 'rocket', 'cloud', 'whale', 'dolphin']
+Incorrectly Predicted: rabbit, Actual: raccoon, Probability: 0.1988
+Top 5 Predictions: ['rabbit', 'raccoon', 'seal', 'otter', 'bowl']
+Incorrectly Predicted: willow tree, Actual: maple tree, Probability: 0.7497
+Top 5 Predictions: ['willow tree', 'maple tree', 'pine tree', 'oak tree', 'palm tree']
+Incorrectly Predicted: seal, Actual: plate, Probability: 0.4096
+Top 5 Predictions: ['seal', 'shrew', 'snail', 'mushroom', 'plate']
+Incorrectly Predicted: pear, Actual: hamster, Probability: 0.5414
+Top 5 Predictions: ['pear', 'cup', 'orange', 'bowl', 'apple']
+Incorrectly Predicted: shrew, Actual: mouse, Probability: 0.2393
+Top 5 Predictions: ['shrew', 'kangaroo', 'beaver', 'possum', 'mouse']
+Incorrectly Predicted: sea, Actual: cloud, Probability: 0.9059
+Top 5 Predictions: ['sea', 'plain', 'cloud', 'mountain', 'ray']
+Incorrectly Predicted: raccoon, Actual: wolf, Probability: 0.4099
+Top 5 Predictions: ['raccoon', 'tiger', 'wolf', 'leopard', 'possum']
+Incorrectly Predicted: hamster, Actual: squirrel, Probability: 0.2835
+Top 5 Predictions: ['hamster', 'squirrel', 'rabbit', 'mouse', 'skunk']
+Incorrectly Predicted: cloud, Actual: skyscraper, Probability: 0.7803
+Top 5 Predictions: ['cloud', 'skyscraper', 'rocket', 'can', 'television']
+Incorrectly Predicted: bear, Actual: possum, Probability: 0.2451
+Top 5 Predictions: ['bear', 'squirrel', 'skunk', 'possum', 'rabbit']
+Incorrectly Predicted: house, Actual: train, Probability: 0.9087
+Top 5 Predictions: ['house', 'train', 'cloud', 'tank', 'rocket']
+Incorrectly Predicted: dinosaur, Actual: crocodile, Probability: 0.4351
+Top 5 Predictions: ['dinosaur', 'crocodile', 'elephant', 'lizard', 'seal']
+Incorrectly Predicted: bowl, Actual: pear, Probability: 0.8390
+Top 5 Predictions: ['bowl', 'apple', 'pear', 'plate', 'orange']
+Incorrectly Predicted: cattle, Actual: fox, Probability: 0.3856
+Top 5 Predictions: ['cattle', 'kangaroo', 'camel', 'fox', 'elephant']
+Incorrectly Predicted: bottle, Actual: lamp, Probability: 0.4345
+Top 5 Predictions: ['bottle', 'lamp', 'rocket', 'orange', 'cup']
+Incorrectly Predicted: cattle, Actual: bear, Probability: 0.9953
+Top 5 Predictions: ['cattle', 'ray', 'kangaroo', 'camel', 'elephant']
+Incorrectly Predicted: apple, Actual: sweet pepper, Probability: 0.5473
+Top 5 Predictions: ['apple', 'sweet pepper', 'pear', 'orange', 'tulip']
+Incorrectly Predicted: plate, Actual: bowl, Probability: 0.9994
+Top 5 Predictions: ['plate', 'bowl', 'cup', 'crab', 'lobster']
+Incorrectly Predicted: beaver, Actual: flatfish, Probability: 0.3645
+Top 5 Predictions: ['beaver', 'seal', 'otter', 'ray', 'shark']
+Incorrectly Predicted: road, Actual: forest, Probability: 0.9968
+Top 5 Predictions: ['road', 'plain', 'bicycle', 'forest', 'mountain']
+Incorrectly Predicted: rocket, Actual: skyscraper, Probability: 0.5093
+Top 5 Predictions: ['rocket', 'bottle', 'wardrobe', 'poppy', 'lamp']
+Incorrectly Predicted: plain, Actual: castle, Probability: 0.2898
+Top 5 Predictions: ['plain', 'girl', 'woman', 'castle', 'boy']
+Incorrectly Predicted: worm, Actual: snake, Probability: 0.9348
+Top 5 Predictions: ['worm', 'snake', 'shrew', 'lizard', 'caterpillar']
+Incorrectly Predicted: willow tree, Actual: maple tree, Probability: 0.5181
+Top 5 Predictions: ['willow tree', 'maple tree', 'oak tree', 'pine tree', 'palm tree']
+Incorrectly Predicted: ray, Actual: shark, Probability: 0.6203
+Top 5 Predictions: ['ray', 'shark', 'dolphin', 'whale', 'sea']
+Incorrectly Predicted: oak tree, Actual: willow tree, Probability: 0.2763
+Top 5 Predictions: ['oak tree', 'willow tree', 'mountain', 'chimpanzee', 'pine tree']
+Incorrectly Predicted: boy, Actual: girl, Probability: 0.9049
+Top 5 Predictions: ['boy', 'girl', 'baby', 'woman', 'man']
+Incorrectly Predicted: mouse, Actual: shrew, Probability: 0.9785
+Top 5 Predictions: ['mouse', 'shrew', 'ray', 'possum', 'skunk']
+Incorrectly Predicted: spider, Actual: beetle, Probability: 0.4527
+Top 5 Predictions: ['spider', 'crab', 'beetle', 'poppy', 'bee']
+Incorrectly Predicted: orange, Actual: sweet pepper, Probability: 0.6160
+Top 5 Predictions: ['orange', 'sweet pepper', 'pear', 'orchid', 'tulip']
+Incorrectly Predicted: leopard, Actual: tiger, Probability: 0.7028
+Top 5 Predictions: ['leopard', 'tiger', 'rabbit', 'crocodile', 'snake']
+Incorrectly Predicted: lion, Actual: otter, Probability: 0.2362
+Top 5 Predictions: ['lion', 'beaver', 'crocodile', 'bear', 'seal']
+Incorrectly Predicted: spider, Actual: beetle, Probability: 0.6580
+Top 5 Predictions: ['spider', 'beetle', 'cockroach', 'bee', 'crab']
+Incorrectly Predicted: bridge, Actual: caterpillar, Probability: 0.0996
+Top 5 Predictions: ['bridge', 'man', 'spider', 'caterpillar', 'ray']
+Incorrectly Predicted: snake, Actual: caterpillar, Probability: 0.5734
+Top 5 Predictions: ['snake', 'worm', 'caterpillar', 'bottle', 'rocket']
+Incorrectly Predicted: chair, Actual: skunk, Probability: 0.9586
+Top 5 Predictions: ['chair', 'couch', 'skunk', 'possum', 'raccoon']
+Incorrectly Predicted: lamp, Actual: clock, Probability: 0.7910
+Top 5 Predictions: ['lamp', 'clock', 'television', 'plate', 'wardrobe']
+Incorrectly Predicted: sea, Actual: cloud, Probability: 0.9270
+Top 5 Predictions: ['sea', 'plain', 'road', 'seal', 'mountain']
+Incorrectly Predicted: oak tree, Actual: maple tree, Probability: 0.8106
+Top 5 Predictions: ['oak tree', 'maple tree', 'willow tree', 'pine tree', 'palm tree']
+Incorrectly Predicted: possum, Actual: squirrel, Probability: 0.8078
+Top 5 Predictions: ['possum', 'shrew', 'mouse', 'squirrel', 'raccoon']
+Incorrectly Predicted: dolphin, Actual: whale, Probability: 0.9818
+Top 5 Predictions: ['dolphin', 'whale', 'ray', 'shark', 'seal']
+Incorrectly Predicted: snake, Actual: worm, Probability: 0.7399
+Top 5 Predictions: ['snake', 'worm', 'caterpillar', 'lizard', 'snail']
+Incorrectly Predicted: squirrel, Actual: beaver, Probability: 0.6532
+Top 5 Predictions: ['squirrel', 'shrew', 'beaver', 'skunk', 'possum']
+Incorrectly Predicted: cattle, Actual: plain, Probability: 0.8120
+Top 5 Predictions: ['cattle', 'plain', 'elephant', 'leopard', 'lion']
+Incorrectly Predicted: lizard, Actual: caterpillar, Probability: 0.6823
+Top 5 Predictions: ['lizard', 'caterpillar', 'worm', 'snake', 'snail']
+Incorrectly Predicted: plain, Actual: mountain, Probability: 0.5872
+Top 5 Predictions: ['plain', 'mountain', 'cloud', 'sea', 'ray']
+Incorrectly Predicted: caterpillar, Actual: tractor, Probability: 0.5872
+Top 5 Predictions: ['caterpillar', 'tractor', 'tiger', 'pickup truck', 'leopard']
+Incorrectly Predicted: crocodile, Actual: rabbit, Probability: 0.2438
+Top 5 Predictions: ['crocodile', 'beaver', 'raccoon', 'leopard', 'rabbit']
+Incorrectly Predicted: girl, Actual: boy, Probability: 0.5464
+Top 5 Predictions: ['girl', 'boy', 'woman', 'ray', 'man']
+Incorrectly Predicted: telephone, Actual: television, Probability: 0.9796
+Top 5 Predictions: ['telephone', 'keyboard', 'plain', 'rocket', 'fox']
+Incorrectly Predicted: kangaroo, Actual: squirrel, Probability: 0.9830
+Top 5 Predictions: ['kangaroo', 'possum', 'rabbit', 'squirrel', 'wolf']
+Incorrectly Predicted: beaver, Actual: otter, Probability: 0.2316
+Top 5 Predictions: ['beaver', 'seal', 'raccoon', 'otter', 'bear']
+Incorrectly Predicted: baby, Actual: seal, Probability: 0.6049
+Top 5 Predictions: ['baby', 'rabbit', 'seal', 'hamster', 'mouse']
+Incorrectly Predicted: tulip, Actual: rose, Probability: 0.8907
+Top 5 Predictions: ['tulip', 'poppy', 'sweet pepper', 'rose', 'mushroom']
+Incorrectly Predicted: dolphin, Actual: whale, Probability: 0.6054
+Top 5 Predictions: ['dolphin', 'whale', 'shark', 'skunk', 'ray']
+Incorrectly Predicted: shark, Actual: otter, Probability: 0.8657
+Top 5 Predictions: ['shark', 'dolphin', 'ray', 'whale', 'seal']
+Incorrectly Predicted: willow tree, Actual: pine tree, Probability: 0.6283
+Top 5 Predictions: ['willow tree', 'pine tree', 'maple tree', 'oak tree', 'palm tree']
+Incorrectly Predicted: bottle, Actual: television, Probability: 0.6303
+Top 5 Predictions: ['bottle', 'television', 'plain', 'telephone', 'tank']
+Incorrectly Predicted: cattle, Actual: camel, Probability: 0.9979
+Top 5 Predictions: ['cattle', 'camel', 'elephant', 'kangaroo', 'plain']
+Incorrectly Predicted: pear, Actual: ray, Probability: 0.4920
+Top 5 Predictions: ['pear', 'flatfish', 'snail', 'shrew', 'mushroom']
+Incorrectly Predicted: can, Actual: lamp, Probability: 0.4384
+Top 5 Predictions: ['can', 'lamp', 'bottle', 'rocket', 'ray']
+Incorrectly Predicted: bear, Actual: crocodile, Probability: 0.6351
+Top 5 Predictions: ['bear', 'skunk', 'chimpanzee', 'beaver', 'porcupine']
+Incorrectly Predicted: bear, Actual: cattle, Probability: 0.7550
+Top 5 Predictions: ['bear', 'beaver', 'fox', 'rabbit', 'cattle']
+Incorrectly Predicted: shark, Actual: dolphin, Probability: 0.4927
+Top 5 Predictions: ['shark', 'whale', 'dolphin', 'ray', 'seal']
+Incorrectly Predicted: pine tree, Actual: oak tree, Probability: 0.9352
+Top 5 Predictions: ['pine tree', 'oak tree', 'maple tree', 'willow tree', 'palm tree']
+Incorrectly Predicted: cockroach, Actual: lobster, Probability: 0.8103
+Top 5 Predictions: ['cockroach', 'beetle', 'lobster', 'bee', 'crab']
+Incorrectly Predicted: pickup truck, Actual: bus, Probability: 0.9234
+Top 5 Predictions: ['pickup truck', 'bus', 'camel', 'tractor', 'train']
+Incorrectly Predicted: plate, Actual: mouse, Probability: 0.2843
+Top 5 Predictions: ['plate', 'bottle', 'pear', 'seal', 'bowl']
+Incorrectly Predicted: mouse, Actual: shrew, Probability: 0.5068
+Top 5 Predictions: ['mouse', 'possum', 'hamster', 'shrew', 'rabbit']
+Incorrectly Predicted: worm, Actual: caterpillar, Probability: 0.9743
+Top 5 Predictions: ['worm', 'caterpillar', 'snake', 'lizard', 'shrew']
+Incorrectly Predicted: plate, Actual: keyboard, Probability: 0.6619
+Top 5 Predictions: ['plate', 'keyboard', 'ray', 'plain', 'television']
+Incorrectly Predicted: mushroom, Actual: snail, Probability: 0.9906
+Top 5 Predictions: ['mushroom', 'snail', 'worm', 'shrew', 'snake']
+Incorrectly Predicted: fox, Actual: possum, Probability: 0.3175
+Top 5 Predictions: ['fox', 'possum', 'kangaroo', 'raccoon', 'wolf']
+Incorrectly Predicted: ray, Actual: seal, Probability: 0.9963
+Top 5 Predictions: ['ray', 'shark', 'dolphin', 'flatfish', 'whale']
+Incorrectly Predicted: lion, Actual: kangaroo, Probability: 0.5200
+Top 5 Predictions: ['lion', 'kangaroo', 'leopard', 'tiger', 'possum']
+Incorrectly Predicted: skyscraper, Actual: bridge, Probability: 0.8574
+Top 5 Predictions: ['skyscraper', 'chair', 'television', 'ray', 'bridge']
+Incorrectly Predicted: boy, Actual: baby, Probability: 0.8835
+Top 5 Predictions: ['boy', 'baby', 'girl', 'man', 'ray']
+Incorrectly Predicted: sea, Actual: ray, Probability: 0.6655
+Top 5 Predictions: ['sea', 'shark', 'ray', 'flatfish', 'dolphin']
+Incorrectly Predicted: bear, Actual: beaver, Probability: 0.3498
+Top 5 Predictions: ['bear', 'beaver', 'chimpanzee', 'otter', 'possum']
+Incorrectly Predicted: raccoon, Actual: kangaroo, Probability: 0.7215
+Top 5 Predictions: ['raccoon', 'possum', 'kangaroo', 'wolf', 'fox']
+Incorrectly Predicted: ray, Actual: flatfish, Probability: 0.2370
+Top 5 Predictions: ['ray', 'woman', 'skunk', 'raccoon', 'kangaroo']
+Incorrectly Predicted: ray, Actual: shark, Probability: 0.7586
+Top 5 Predictions: ['ray', 'lamp', 'pear', 'bowl', 'rocket']
+Incorrectly Predicted: flatfish, Actual: beaver, Probability: 0.3691
+Top 5 Predictions: ['flatfish', 'beaver', 'shrew', 'mushroom', 'trout']
+Incorrectly Predicted: pine tree, Actual: oak tree, Probability: 0.9941
+Top 5 Predictions: ['pine tree', 'oak tree', 'maple tree', 'willow tree', 'palm tree']
+Incorrectly Predicted: lobster, Actual: crab, Probability: 0.6791
+Top 5 Predictions: ['lobster', 'crab', 'spider', 'worm', 'caterpillar']
+Incorrectly Predicted: mountain, Actual: cloud, Probability: 0.4082
+Top 5 Predictions: ['mountain', 'plain', 'cloud', 'ray', 'rocket']
+Incorrectly Predicted: skunk, Actual: beaver, Probability: 0.4250
+Top 5 Predictions: ['skunk', 'porcupine', 'bear', 'squirrel', 'wolf']
+Incorrectly Predicted: mushroom, Actual: crab, Probability: 0.5491
+Top 5 Predictions: ['mushroom', 'snail', 'caterpillar', 'orange', 'worm']
+Incorrectly Predicted: cockroach, Actual: beetle, Probability: 0.9975
+Top 5 Predictions: ['cockroach', 'beetle', 'spider', 'bee', 'porcupine']
+Incorrectly Predicted: wolf, Actual: flatfish, Probability: 0.3829
+Top 5 Predictions: ['wolf', 'seal', 'bear', 'lion', 'rabbit']
+Incorrectly Predicted: lawn mower, Actual: beetle, Probability: 0.2744
+Top 5 Predictions: ['lawn mower', 'snail', 'tractor', 'bottle', 'mouse']
+Incorrectly Predicted: rose, Actual: sweet pepper, Probability: 0.7067
+Top 5 Predictions: ['rose', 'sweet pepper', 'poppy', 'bowl', 'cup']
+Incorrectly Predicted: bottle, Actual: elephant, Probability: 0.5806
+Top 5 Predictions: ['bottle', 'cup', 'seal', 'lamp', 'mushroom']
+Incorrectly Predicted: bee, Actual: beetle, Probability: 0.4998
+Top 5 Predictions: ['bee', 'spider', 'crab', 'beetle', 'cockroach']
+Incorrectly Predicted: lion, Actual: seal, Probability: 0.8765
+Top 5 Predictions: ['lion', 'seal', 'wolf', 'bear', 'porcupine']
+Incorrectly Predicted: snake, Actual: worm, Probability: 0.4598
+Top 5 Predictions: ['snake', 'worm', 'caterpillar', 'lizard', 'crocodile']
+Incorrectly Predicted: caterpillar, Actual: beetle, Probability: 0.4486
+Top 5 Predictions: ['caterpillar', 'bottle', 'trout', 'beetle', 'butterfly']
+Incorrectly Predicted: ray, Actual: beaver, Probability: 0.6294
+Top 5 Predictions: ['ray', 'flatfish', 'dolphin', 'seal', 'aquarium fish']
+Incorrectly Predicted: table, Actual: couch, Probability: 0.9585
+Top 5 Predictions: ['table', 'couch', 'chair', 'television', 'keyboard']
+Incorrectly Predicted: snail, Actual: otter, Probability: 0.4353
+Top 5 Predictions: ['snail', 'seal', 'beaver', 'worm', 'shrew']
+Incorrectly Predicted: table, Actual: lobster, Probability: 0.2389
+Top 5 Predictions: ['table', 'cockroach', 'chair', 'couch', 'snake']
+Incorrectly Predicted: maple tree, Actual: oak tree, Probability: 0.9680
+Top 5 Predictions: ['maple tree', 'oak tree', 'pine tree', 'willow tree', 'orange']
+Incorrectly Predicted: rabbit, Actual: kangaroo, Probability: 0.3949
+Top 5 Predictions: ['rabbit', 'otter', 'beaver', 'raccoon', 'kangaroo']
+Incorrectly Predicted: mouse, Actual: lamp, Probability: 0.3329
+Top 5 Predictions: ['mouse', 'ray', 'lamp', 'telephone', 'chair']
+Incorrectly Predicted: boy, Actual: man, Probability: 0.5637
+Top 5 Predictions: ['boy', 'man', 'ray', 'plain', 'rocket']
+Incorrectly Predicted: rabbit, Actual: mouse, Probability: 0.4182
+Top 5 Predictions: ['rabbit', 'mouse', 'squirrel', 'hamster', 'possum']
+Incorrectly Predicted: pine tree, Actual: maple tree, Probability: 0.7472
+Top 5 Predictions: ['pine tree', 'oak tree', 'maple tree', 'willow tree', 'pear']
+Incorrectly Predicted: turtle, Actual: flatfish, Probability: 0.7321
+Top 5 Predictions: ['turtle', 'flatfish', 'crab', 'aquarium fish', 'snail']
+Incorrectly Predicted: crab, Actual: lobster, Probability: 0.7904
+Top 5 Predictions: ['crab', 'lobster', 'spider', 'caterpillar', 'ray']
+Incorrectly Predicted: whale, Actual: shark, Probability: 0.9884
+Top 5 Predictions: ['whale', 'shark', 'dolphin', 'ray', 'aquarium fish']
+Incorrectly Predicted: shrew, Actual: rabbit, Probability: 0.3036
+Top 5 Predictions: ['shrew', 'rabbit', 'beaver', 'skunk', 'squirrel']
+Incorrectly Predicted: motorcycle, Actual: beetle, Probability: 0.4896
+Top 5 Predictions: ['motorcycle', 'bicycle', 'beetle', 'cockroach', 'lawn mower']
+Incorrectly Predicted: worm, Actual: lobster, Probability: 0.6562
+Top 5 Predictions: ['worm', 'snake', 'lizard', 'lobster', 'caterpillar']
+Incorrectly Predicted: raccoon, Actual: forest, Probability: 0.1638
+Top 5 Predictions: ['raccoon', 'beaver', 'motorcycle', 'bicycle', 'crocodile']
+Incorrectly Predicted: rabbit, Actual: possum, Probability: 0.4640
+Top 5 Predictions: ['rabbit', 'mouse', 'hamster', 'table', 'squirrel']
+Incorrectly Predicted: possum, Actual: mouse, Probability: 0.7371
+Top 5 Predictions: ['possum', 'shrew', 'mouse', 'hamster', 'squirrel']
+Incorrectly Predicted: whale, Actual: dolphin, Probability: 0.8342
+Top 5 Predictions: ['whale', 'dolphin', 'seal', 'shark', 'skunk']
+Incorrectly Predicted: shrew, Actual: porcupine, Probability: 0.9396
+Top 5 Predictions: ['shrew', 'beaver', 'possum', 'mouse', 'rabbit']
+Incorrectly Predicted: rabbit, Actual: seal, Probability: 0.2165
+Top 5 Predictions: ['rabbit', 'crab', 'snail', 'seal', 'turtle']
+Incorrectly Predicted: flatfish, Actual: ray, Probability: 0.9831
+Top 5 Predictions: ['flatfish', 'ray', 'shrew', 'pear', 'snail']
+Incorrectly Predicted: caterpillar, Actual: tractor, Probability: 0.8624
+Top 5 Predictions: ['caterpillar', 'tractor', 'tank', 'tiger', 'lawn mower']
+Incorrectly Predicted: sea, Actual: cloud, Probability: 0.9680
+Top 5 Predictions: ['sea', 'plain', 'cloud', 'mountain', 'whale']
+Incorrectly Predicted: porcupine, Actual: beaver, Probability: 0.5094
+Top 5 Predictions: ['porcupine', 'beaver', 'lion', 'camel', 'bear']
+Incorrectly Predicted: possum, Actual: mouse, Probability: 0.8895
+Top 5 Predictions: ['possum', 'mouse', 'hamster', 'shrew', 'raccoon']
+Incorrectly Predicted: orange, Actual: rabbit, Probability: 0.3861
+Top 5 Predictions: ['orange', 'chair', 'wardrobe', 'cattle', 'ray']
+Incorrectly Predicted: ray, Actual: tulip, Probability: 0.1359
+Top 5 Predictions: ['ray', 'butterfly', 'rocket', 'mountain', 'mouse']
+Incorrectly Predicted: hamster, Actual: mouse, Probability: 0.6702
+Top 5 Predictions: ['hamster', 'mouse', 'possum', 'shrew', 'squirrel']
+Incorrectly Predicted: pine tree, Actual: maple tree, Probability: 0.4626
+Top 5 Predictions: ['pine tree', 'maple tree', 'oak tree', 'willow tree', 'palm tree']
+Incorrectly Predicted: snake, Actual: worm, Probability: 0.8949
+Top 5 Predictions: ['snake', 'worm', 'lizard', 'shrew', 'otter']
+Incorrectly Predicted: porcupine, Actual: rabbit, Probability: 0.2126
+Top 5 Predictions: ['porcupine', 'shrew', 'beaver', 'squirrel', 'skunk']
+Incorrectly Predicted: shrew, Actual: mouse, Probability: 0.5548
+Top 5 Predictions: ['shrew', 'mouse', 'possum', 'hamster', 'squirrel']
+Incorrectly Predicted: orange, Actual: apple, Probability: 0.9700
+Top 5 Predictions: ['orange', 'apple', 'bowl', 'mushroom', 'lamp']
+Incorrectly Predicted: possum, Actual: shrew, Probability: 0.7884
+Top 5 Predictions: ['possum', 'mouse', 'shrew', 'otter', 'raccoon']
+Incorrectly Predicted: snake, Actual: squirrel, Probability: 0.5833
+Top 5 Predictions: ['snake', 'shrew', 'lizard', 'otter', 'squirrel']
+Incorrectly Predicted: pine tree, Actual: willow tree, Probability: 0.5010
+Top 5 Predictions: ['pine tree', 'caterpillar', 'maple tree', 'bee', 'willow tree']
+Incorrectly Predicted: willow tree, Actual: oak tree, Probability: 0.9310
+Top 5 Predictions: ['willow tree', 'oak tree', 'maple tree', 'pine tree', 'palm tree']
+Incorrectly Predicted: bottle, Actual: couch, Probability: 0.9424
+Top 5 Predictions: ['bottle', 'couch', 'pear', 'chair', 'can']
+Incorrectly Predicted: seal, Actual: cattle, Probability: 0.1806
+Top 5 Predictions: ['seal', 'shark', 'dolphin', 'kangaroo', 'wolf']
+Incorrectly Predicted: hamster, Actual: mouse, Probability: 0.7984
+Top 5 Predictions: ['hamster', 'mouse', 'skunk', 'ray', 'rabbit']
+Incorrectly Predicted: possum, Actual: porcupine, Probability: 0.7265
+Top 5 Predictions: ['possum', 'shrew', 'porcupine', 'raccoon', 'beaver']
+Incorrectly Predicted: man, Actual: otter, Probability: 0.3002
+Top 5 Predictions: ['man', 'woman', 'skunk', 'girl', 'rabbit']
+Incorrectly Predicted: ray, Actual: spider, Probability: 0.3114
+Top 5 Predictions: ['ray', 'spider', 'mouse', 'worm', 'cockroach']
+Incorrectly Predicted: plain, Actual: bowl, Probability: 0.4575
+Top 5 Predictions: ['plain', 'plate', 'man', 'worm', 'boy']
+Incorrectly Predicted: worm, Actual: lizard, Probability: 0.3961
+Top 5 Predictions: ['worm', 'lizard', 'cockroach', 'ray', 'shrew']
+Incorrectly Predicted: plain, Actual: forest, Probability: 0.5879
+Top 5 Predictions: ['plain', 'mountain', 'forest', 'road', 'willow tree']
+Incorrectly Predicted: snake, Actual: lizard, Probability: 0.1121
+Top 5 Predictions: ['snake', 'lizard', 'caterpillar', 'mouse', 'snail']
+Incorrectly Predicted: chimpanzee, Actual: otter, Probability: 0.2908
+Top 5 Predictions: ['chimpanzee', 'raccoon', 'otter', 'hamster', 'lion']
+Incorrectly Predicted: ray, Actual: whale, Probability: 0.4468
+Top 5 Predictions: ['ray', 'dolphin', 'rocket', 'whale', 'beetle']
+Incorrectly Predicted: snake, Actual: worm, Probability: 0.9070
+Top 5 Predictions: ['snake', 'worm', 'plain', 'caterpillar', 'leopard']
+Incorrectly Predicted: mouse, Actual: squirrel, Probability: 0.5748
+Top 5 Predictions: ['mouse', 'possum', 'skunk', 'squirrel', 'shrew']
+Incorrectly Predicted: lobster, Actual: crab, Probability: 0.8147
+Top 5 Predictions: ['lobster', 'crab', 'plate', 'bowl', 'cockroach']
+Incorrectly Predicted: spider, Actual: snail, Probability: 0.5965
+Top 5 Predictions: ['spider', 'poppy', 'porcupine', 'mushroom', 'orchid']
+Incorrectly Predicted: dinosaur, Actual: otter, Probability: 0.2070
+Top 5 Predictions: ['dinosaur', 'crocodile', 'lizard', 'seal', 'otter']
+Incorrectly Predicted: snail, Actual: lizard, Probability: 0.3049
+Top 5 Predictions: ['snail', 'shrew', 'snake', 'squirrel', 'lizard']
+Incorrectly Predicted: tiger, Actual: leopard, Probability: 0.5864
+Top 5 Predictions: ['tiger', 'leopard', 'raccoon', 'snake', 'possum']
+Incorrectly Predicted: pear, Actual: caterpillar, Probability: 0.6142
+Top 5 Predictions: ['pear', 'sweet pepper', 'ray', 'squirrel', 'hamster']
+Incorrectly Predicted: dolphin, Actual: mouse, Probability: 0.4268
+Top 5 Predictions: ['dolphin', 'mouse', 'ray', 'shark', 'flatfish']
+Incorrectly Predicted: worm, Actual: crab, Probability: 0.8486
+Top 5 Predictions: ['worm', 'crab', 'snail', 'caterpillar', 'orange']
+Incorrectly Predicted: apple, Actual: bowl, Probability: 0.9224
+Top 5 Predictions: ['apple', 'pear', 'bowl', 'plate', 'sweet pepper']
+Incorrectly Predicted: bus, Actual: television, Probability: 0.5022
+Top 5 Predictions: ['bus', 'pickup truck', 'television', 'ray', 'plate']
+Incorrectly Predicted: train, Actual: television, Probability: 0.3387
+Top 5 Predictions: ['train', 'television', 'streetcar', 'telephone', 'keyboard']
+Incorrectly Predicted: house, Actual: pine tree, Probability: 0.8461
+Top 5 Predictions: ['house', 'pine tree', 'maple tree', 'willow tree', 'oak tree']
+Incorrectly Predicted: chimpanzee, Actual: camel, Probability: 0.9986
+Top 5 Predictions: ['chimpanzee', 'mouse', 'possum', 'camel', 'skunk']
+Incorrectly Predicted: fox, Actual: lobster, Probability: 0.1786
+Top 5 Predictions: ['fox', 'wolf', 'man', 'tiger', 'rabbit']
+Incorrectly Predicted: shrew, Actual: beaver, Probability: 0.3716
+Top 5 Predictions: ['shrew', 'rabbit', 'squirrel', 'possum', 'otter']
+Incorrectly Predicted: camel, Actual: crocodile, Probability: 0.3508
+Top 5 Predictions: ['camel', 'wolf', 'lion', 'kangaroo', 'leopard']
+Incorrectly Predicted: sunflower, Actual: tulip, Probability: 0.8650
+Top 5 Predictions: ['sunflower', 'orange', 'poppy', 'tulip', 'orchid']
+Incorrectly Predicted: bottle, Actual: cup, Probability: 0.7477
+Top 5 Predictions: ['bottle', 'cup', 'tulip', 'bowl', 'plain']
+Incorrectly Predicted: lamp, Actual: cup, Probability: 0.2963
+Top 5 Predictions: ['lamp', 'mushroom', 'rocket', 'bottle', 'pear']
+Incorrectly Predicted: tiger, Actual: leopard, Probability: 0.9854
+Top 5 Predictions: ['tiger', 'leopard', 'lion', 'bear', 'wolf']
+Incorrectly Predicted: mountain, Actual: seal, Probability: 0.2564
+Top 5 Predictions: ['mountain', 'man', 'woman', 'plain', 'wolf']
+Incorrectly Predicted: mouse, Actual: keyboard, Probability: 0.9916
+Top 5 Predictions: ['mouse', 'keyboard', 'ray', 'hamster', 'telephone']
+Incorrectly Predicted: ray, Actual: aquarium fish, Probability: 0.6361
+Top 5 Predictions: ['ray', 'aquarium fish', 'flatfish', 'crab', 'dolphin']
+Incorrectly Predicted: worm, Actual: crab, Probability: 0.9543
+Top 5 Predictions: ['worm', 'shrew', 'flatfish', 'snake', 'crab']
+Incorrectly Predicted: mouse, Actual: shrew, Probability: 0.8656
+Top 5 Predictions: ['mouse', 'shrew', 'hamster', 'possum', 'snail']
+Incorrectly Predicted: telephone, Actual: man, Probability: 0.6162
+Top 5 Predictions: ['telephone', 'man', 'television', 'ray', 'snake']
+Incorrectly Predicted: bed, Actual: table, Probability: 0.7608
+Top 5 Predictions: ['bed', 'table', 'couch', 'house', 'bowl']
+Incorrectly Predicted: kangaroo, Actual: cattle, Probability: 0.5211
+Top 5 Predictions: ['kangaroo', 'lion', 'wolf', 'leopard', 'tiger']
+Incorrectly Predicted: worm, Actual: crab, Probability: 0.2520
+Top 5 Predictions: ['worm', 'cockroach', 'butterfly', 'trout', 'caterpillar']
+Incorrectly Predicted: tiger, Actual: leopard, Probability: 0.3440
+Top 5 Predictions: ['tiger', 'fox', 'wolf', 'lion', 'leopard']
+Incorrectly Predicted: lion, Actual: raccoon, Probability: 0.1760
+Top 5 Predictions: ['lion', 'beaver', 'bear', 'camel', 'otter']
+Incorrectly Predicted: pear, Actual: orange, Probability: 0.6824
+Top 5 Predictions: ['pear', 'orange', 'apple', 'plate', 'ray']
+Incorrectly Predicted: ray, Actual: spider, Probability: 0.1458
+Top 5 Predictions: ['ray', 'spider', 'plain', 'orange', 'road']
+Incorrectly Predicted: possum, Actual: porcupine, Probability: 0.9773
+Top 5 Predictions: ['possum', 'porcupine', 'shrew', 'squirrel', 'hamster']
+Incorrectly Predicted: crab, Actual: lobster, Probability: 0.8152
+Top 5 Predictions: ['crab', 'lobster', 'spider', 'cockroach', 'beetle']
+Incorrectly Predicted: squirrel, Actual: raccoon, Probability: 0.1995
+Top 5 Predictions: ['squirrel', 'rabbit', 'dinosaur', 'seal', 'possum']
+Incorrectly Predicted: bus, Actual: streetcar, Probability: 0.5152
+Top 5 Predictions: ['bus', 'streetcar', 'train', 'pickup truck', 'tank']
+Incorrectly Predicted: chair, Actual: couch, Probability: 0.7182
+Top 5 Predictions: ['chair', 'boy', 'girl', 'baby', 'couch']
+Accuracy: 81.10%
+Total samples: 1000, Correct predictions: 811
+Average Loss: 0.7303
